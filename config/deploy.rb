@@ -1,19 +1,19 @@
 #========================
 #CONFIG
 #========================
-set :application, "site"
+set :application, "coupons.insales.sovechkin.com"
 #========================
 #CONFIG
 #========================
 require           "capistrano-offroad"
 offroad_modules   "defaults", "supervisord"
-set :repository,  "git@github.com:user/#{application}.git"
-set :supervisord_start_group, "name"
-set :supervisord_stop_group, "name"
+set :repository,  "git@github.com:pomeo/insalescoupons.git"
+set :supervisord_start_group, "coupons"
+set :supervisord_stop_group, "coupons"
 #========================
 #ROLES
 #========================
-set  :gateway,    "#{application}"  # main server
-role :app,        "ubuntu@10.3.x.x" # lxc container
+set  :gateway,    "#{application}"    # main server
+role :app,        "ubuntu@10.3.10.40" # lxc container
  
 after "deploy:create_symlink", "deploy:npm_install", "deploy:restart"
