@@ -4,7 +4,6 @@ var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var path = require('path');
 var favicon = require('static-favicon');
-var stylus = require('stylus');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -28,14 +27,6 @@ app.use(bodyParser.urlencoded());
 app.use(cookieParser());
 app.use(session({ store: new RedisStore({host:'redis.fr1.server.sovechkin.com', port:6379, pass:''}), secret: process.env.SECRET }))
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(stylus.middleware({
-      src: __dirname + '/stylus',
-      dest: __dirname + '/public',
-      compile: function(str, path) {
-          return stylus(str)
-            .set('compress', true);
-      }
-  }));
 
 app.use('/', routes);
 app.use('/users', users);
