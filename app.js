@@ -23,7 +23,7 @@ if (app.get('env') !== 'development') {
   app.enable('view cache');
 }
 app.enable('trust proxy');
-app.use(favicon());
+app.use(favicon(__dirname + '/public/favicon.ico'));
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
