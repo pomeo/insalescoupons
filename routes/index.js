@@ -16,8 +16,7 @@ var express     = require('express'),
 
 /* GET home page. */
 router.get('/', function(req, res) {
-  log('Test', 'error');
-  res.render('index', { title: 'Express' });
+  res.render('index', { title: '' });
 });
 
 module.exports = router;
