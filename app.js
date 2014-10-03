@@ -1,5 +1,5 @@
 var express = require('express');
-var debug = require('debug')('my-application');
+var debug = require('debug')('coupons');
 var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var path = require('path');
