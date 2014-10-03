@@ -1,7 +1,7 @@
 #========================
 #CONFIG
 #========================
-set :application, "coupons.insales.sovechkin.com"
+set :application, "coupons.salesapps.ru"
 #========================
 #CONFIG
 #========================
@@ -15,5 +15,5 @@ set :supervisord_stop_group, "coupons"
 #========================
 set  :gateway,    "#{application}"    # main server
 role :app,        "ubuntu@10.3.10.40" # lxc container
- 
+
 after "deploy:create_symlink", "deploy:npm_install", "deploy:restart"
