@@ -14,7 +14,6 @@ var express     = require('express'),
     }),
     debugOn     = true;
 
-/* GET home page. */
 router.get('/', function(req, res) {
   res.render('index', { title: '' });
 });
