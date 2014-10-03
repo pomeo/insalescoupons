@@ -1,12 +1,27 @@
 var express    = require('express'),
     router     = express.Router(),
     winston    = require('winston'),
-    logger     = new (winston.Logger)({
+    logger,
+    debugOn    = true;
+
+if (process.env.NODE_ENV === 'development') {
+  logger = new (winston.Logger)({
       transports: [
         new (winston.transports.Console)()
       ]
-    }),
-    debugOn    = true;
+  });
+} else {
+  require('winston-logstash');
+  logger = new (winston.Logger)({
+      transports: [
+        new (winston.transports.Logstash)({
+          port: 28777,
+          node_name: 'coupons',
+          host: process.env.logstash
+        })
+      ]
+  });
+}
 
 /* GET home page. */
 router.get('/', function(req, res) {
