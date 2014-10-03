@@ -25,6 +25,7 @@ if (process.env.NODE_ENV === 'development') {
 
 /* GET home page. */
 router.get('/', function(req, res) {
+  log('Test', 'info');
   res.render('index', { title: 'Express' });
 });
 
