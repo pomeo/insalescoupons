@@ -11,6 +11,7 @@ var express     = require('express'),
     }),
     Q           = require('q'),
     rest        = require('restler'),
+    xml2js      = require('xml2js'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
