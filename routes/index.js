@@ -14,6 +14,7 @@ var express     = require('express'),
     xml2js      = require('xml2js'),
     crypto      = require('crypto'),
     moment      = require('moment'),
+    hat         = require('hat'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
