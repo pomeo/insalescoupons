@@ -2,6 +2,13 @@ var express     = require('express'),
     router      = express.Router(),
     mongoose    = require('mongoose'),
     Schema      = mongoose.Schema,
+    kue         = require('kue'),
+    jobs        = kue.createQueue({
+      prefix: 'q',
+      redis: {
+        host: process.env.redis
+      }
+    }),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
