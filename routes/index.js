@@ -35,6 +35,47 @@ router.get('/', function(req, res) {
   res.render('index', { title: '' });
 });
 
+router.get('/install', function(req, res) {
+  if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
+    Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
+      if (a == null) {
+        var app = new Apps({
+          insalesid  : req.query.insales_id,
+          insalesurl : req.query.shop,
+          token      : crypto.createHash('md5').update(req.query.token + process.env.insalessecret).digest('hex'),
+          created_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
+          updated_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
+          enabled    : true
+        });
+        app.save(function (err) {
+          if (err) {
+            res.send(err, 500);
+          } else {
+            res.send(200);
+          }
+        });
+      } else {
+        if (a.enabled == true) {
+          res.send('Приложение уже установленно', 403);
+        } else {
+          a.token = crypto.createHash('md5').update(req.query.token + process.env.insalessecret).digest('hex');
+          a.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
+          a.enabled = true;
+          a.save(function (err) {
+            if (err) {
+              res.send(err, 500);
+            } else {
+              res.send(200);
+            }
+          });
+        }
+      }
+    });
+  } else {
+    res.send('Ошибка установки приложения', 403);
+  }
+});
+
 module.exports = router;
 
 mongoose.connect('mongodb://' + process.env.mongo + '/coupons');
