@@ -16,6 +16,7 @@ var express     = require('express'),
     moment      = require('moment'),
     hat         = require('hat'),
     async       = require('async'),
+    cc          = require('coupon-code'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
