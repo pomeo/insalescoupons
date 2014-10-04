@@ -1,5 +1,7 @@
 var express     = require('express'),
     router      = express.Router(),
+    mongoose    = require('mongoose'),
+    Schema      = mongoose.Schema,
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
