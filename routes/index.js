@@ -15,6 +15,7 @@ var express     = require('express'),
     crypto      = require('crypto'),
     moment      = require('moment'),
     hat         = require('hat'),
+    async       = require('async'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
