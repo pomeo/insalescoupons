@@ -13,6 +13,7 @@ var express     = require('express'),
     rest        = require('restler'),
     xml2js      = require('xml2js'),
     crypto      = require('crypto'),
+    moment      = require('moment'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
