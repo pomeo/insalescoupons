@@ -9,6 +9,7 @@ var express     = require('express'),
         host: process.env.redis
       }
     }),
+    Q           = require('q'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
