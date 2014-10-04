@@ -10,6 +10,7 @@ var express     = require('express'),
       }
     }),
     Q           = require('q'),
+    rest        = require('restler'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
