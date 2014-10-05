@@ -1,6 +1,18 @@
 doctype html
-html
+html.uk-height-1-1
   head
     title= title
-  body
+    link(rel='stylesheet', href='/css/uikit.css')
+    link(rel='stylesheet', href='/css/uikit.gradient.css')
+    link(rel='stylesheet', href='/css/addons/uikit.addons.css')
+    link(rel='stylesheet', href='/css/addons/uikit.gradient.addons.css')
+    link(rel='stylesheet', href='/css/styles.css')
+    script(src='/js/jquery-2.1.1.js')
+    script(src='/js/uikit.js')
+    script(src='/js/addons/form-select.js')
+    script(src='/js/jquery.validate.js')
+    script(src='/js/additional-methods.js')
+    script(src='/js/jquery.form.js')
+    script(src='/js/ui.js')
+  body.uk-height-1-1
     block content
