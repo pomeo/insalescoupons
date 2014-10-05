@@ -22,7 +22,7 @@
     "mongoose": "^3.8.17",
     "morgan": "~1.0.0",
     "q": "^1.0.1",
-    "restler": "^3.2.2",
+    "restler": "pomeo/restler",
     "serve-favicon": "^2.1.5",
     "winston": "^0.8.0",
     "winston-logstash": "^0.1.11",
