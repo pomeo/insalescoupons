@@ -22,7 +22,7 @@ app.set('view engine', 'jade');
 if (app.get('env') !== 'development') {
   app.enable('view cache');
 }
-app.enable('trust proxy');
+app.set('trust proxy', 1)
 app.use(favicon(__dirname + '/public/favicon.ico'));
 app.use(bugsnag.requestHandler);
 app.use(logger('dev'));
