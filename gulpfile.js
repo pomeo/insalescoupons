@@ -102,6 +102,6 @@ gulp.task('browser-sync', function() {
   });
 });
 
-gulp.task('default', ['minify-css', 'stylus', 'images', 'compress', 'copy-json', 'browser-sync', 'mocha', 'karma'], function () {
+gulp.task('default', ['minify-css', 'stylus', 'images', 'compress', 'copy-json', 'browser-sync'], function () {
     gulp.watch(['views/**/*.jade'], reload);
 });
