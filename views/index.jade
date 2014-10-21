@@ -30,3 +30,33 @@ block content
    | node.src = 'http://' + kament_subdomain + '.svkament.ru/js/embed.js';
    | (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(node);
    | })();
+  div.uk-container-center.b-main
+    form.uk-form.uk-margin-top
+      fieldset(data-uk-margin)
+        legend Сгенерировать
+        div.uk-form-row
+          div.uk-form-icon
+            i.uk-icon-hand-o-right
+            input#c-num(name="c-num", type="number", min="1", max="10000", value="5")
+          label.uk-form-label.uk-margin-left(for="c-num") количество купонов
+        div.uk-form-row
+          div.uk-form-icon
+            i.uk-icon-hand-o-right
+            input#c-part(name="c-part", type="number", min="1", max="5", value="3")
+          label.uk-form-label.uk-margin-left(for="c-part") количество частей
+        div.uk-form-row
+          div.uk-form-icon
+            i.uk-icon-hand-o-right
+            input#c-partlen(name="c-partlen", type="number", min="4", max="10", value="6")
+          label.uk-form-label.uk-margin-left(for="c-partlen") длина каждой части
+        div.uk-form-row
+          div.uk-form-select.uk-button(data-uk-form-select)
+            span
+            i.uk-icon-caret-down.uk-margin-small-left
+            select
+              option создать новые, удалив все текущие
+              option создать новые, добавив к текущим
+              option создать новые, удалив только использованные
+              option создать новые, удалив только не использованные
+          i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
+        button.uk-button сгенерировать
