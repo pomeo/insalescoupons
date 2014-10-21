@@ -1,5 +1,19 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  nav.tm-navbar.uk-navbar.uk-navbar-attached
+    div.uk-container.uk-container-center.b-header
+      div.uk-navbar-brand Генератор купонов
+      ul.uk-navbar-nav
+        li.uk-active
+          a(href="/") Купоны
+        li
+          a(href="/") Импорт/Экспорт
+        li
+          a(href="/opisanie") Описание
+      div.uk-navbar-flip
+        ul.uk-navbar-nav
+          li
+            a(href="#changelog", data-uk-offcanvas) Изменения
+          li
+            a(href="#predlojeniya", data-uk-offcanvas) Предложения
