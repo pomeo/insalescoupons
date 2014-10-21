@@ -60,3 +60,17 @@ block content
               option создать новые, удалив только не использованные
           i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
         button.uk-button сгенерировать
+    form.uk-form.uk-margin-top
+      fieldset(data-uk-margin)
+        legend Удалить
+        div.uk-form-row
+          div.uk-form-select.uk-button(data-uk-form-select)
+            span
+            i.uk-icon-caret-down.uk-margin-small-left
+            select
+              option создать новые, удалив все текущие
+              option создать новые, добавив к текущим
+              option создать новые, удалив только использованные
+              option создать новые, удалив только не использованные
+          i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
+        button.uk-button удалить
