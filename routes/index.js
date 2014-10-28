@@ -35,7 +35,128 @@ var express     = require('express'),
     debugOn     = true;
 
 router.get('/', function(req, res) {
-  res.render('index', { title: '' });
+  if (req.query.token && (req.query.token !== '')) {
+    Apps.findOne({autologin:req.query.token}, function(err, a) {
+      if (a) {
+        req.session.insalesid = a.insalesid;
+        res.redirect('/');
+      } else {
+        res.send('Ошибка автологина', 403);
+      }
+    });
+  } else {
+    var insid = req.session.insalesid || req.query.insales_id;
+    log('Попытка входа магазина: ' + insid);
+    if ((req.query.insales_id && (req.query.insales_id !== '')) || req.session.insalesid !== undefined) {
+      Apps.findOne({insalesid:insid}, function(err, app) {
+        if (app.enabled == true) {
+          if (req.session.insalesid) {
+            var n = -1;
+            var number;
+            var p = -1;
+            var parts;
+            var l = -1;
+            var length;
+            var v = -1;
+            var act;
+            var a = -1;
+            var variants;
+            var t = -1;
+            var type;
+            var d = -1;
+            var discount;
+            var u = -1;
+            var expired;
+            for (var i = 0; i < app.settings.length; ++i) {
+              if (app.settings[i].property == 'coupon-number') {
+                n = app.settings[i].value;
+              } else if (app.settings[i].property == 'coupon-parts') {
+                p = app.settings[i].value;
+              } else if (app.settings[i].property == 'coupon-part-length') {
+                l = app.settings[i].value;
+              } else if (app.settings[i].property == 'coupon-act') {
+                a = app.settings[i].value;
+              } else if (app.settings[i].property == 'coupon-variants') {
+                v = app.settings[i].value;
+              } else if (app.settings[i].property == 'type-discount') {
+                t = app.settings[i].value;
+              } else if (app.settings[i].property == 'discount') {
+                d = app.settings[i].value;
+              } else if (app.settings[i].property == 'coupon-expired') {
+                u = app.settings[i].value;
+              }
+            }
+            if (n !== -1) {
+              number = n;
+            } else {
+              number = 5;
+            }
+            if (p !== -1) {
+              parts = p;
+            } else {
+              parts = 3;
+            }
+            if (l !== -1) {
+              length = l;
+            } else {
+              length = 6;
+            }
+            if (a !== -1) {
+              act = a;
+            } else {
+              act = 1;
+            }
+            if (v !== -1) {
+              variants = v;
+            } else {
+              variants = 1;
+            }
+            if (t !== -1) {
+              type = t;
+            } else {
+              type = 1;
+            }
+            if (d !== -1) {
+              discount = d;
+            } else {
+              discount = '';
+            }
+            if (u !== -1) {
+              expired = u;
+            } else {
+              expired = '01.01.2016';
+            }
+            res.render('index', {
+              title    : '',
+              number   : number,
+              parts    : parts,
+              length   : length,
+              act      : act,
+              variants : variants,
+              type     : type,
+              discount : discount,
+              expired  : expired
+            });
+          } else {
+            log('Авторизация ' + req.query.insales_id, 'info');
+            var id = hat();
+            app.autologin = crypto.createHash('md5').update(id + app.token).digest('hex');
+            app.save(function (err) {
+              if (err) {
+                res.send(err, 500);
+              } else {
+                res.redirect('http://' + app.insalesurl + '/admin/applications/' + process.env.insalesid + '/login?token=' + id + '&login=http://localhost');
+              }
+            });
+          }
+        } else {
+          res.send('Приложение не установлено для данного магазина', 403);
+        }
+      });
+    } else {
+      res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+    }
+  }
 });
 
 router.get('/install', function(req, res) {
