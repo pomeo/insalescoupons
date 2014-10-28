@@ -137,6 +137,7 @@ AppsSchema.add({
   autologin   : String,
   settings    : [SettingsSchema],
   coupons     : [CouponsSchema],
+  collections : [CollectionsSchema],
   created_at  : Date,
   updated_at  : Date,
   enabled     : Boolean
