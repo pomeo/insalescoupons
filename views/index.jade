@@ -69,6 +69,9 @@ block content
           div.uk-form-select.uk-button(data-uk-form-select)
             span
             i.uk-icon-caret-down.uk-margin-small-left
+            select#act(name="act")
+              option(value="1" selected = act == 1) одноразовый купон
+              option(value="0" selected = act == 0) многоразовый купон
             select#variants(name="variants")
               option(value="1" selected = variants == 1) создать новые, удалив все текущие
               option(value="2" selected = variants == 2) создать новые, добавив к текущим
