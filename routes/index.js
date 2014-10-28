@@ -318,6 +318,19 @@ router.post('/generate', function(req, res) {
   }
 })
 
+router.get('/sample', function(req, res) {
+  if (req.session.insalesid) {
+    var p = parseInt(req.param('parts'));
+    var l = parseInt(req.param('length'));
+    if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
+      res.json(cc.generate({ parts: p, partLen: l }));
+    } else {
+      res.json('ошибка запроса');
+    }
+  } else {
+    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+  }
+})
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
     Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
