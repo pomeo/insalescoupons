@@ -79,6 +79,12 @@ block content
             select#typediscount(name="typediscount")
               option(value="1" selected = type == 1) тип скидки: процент
               option(value="2" selected = type == 2) тип скидки: денежная величина
+          div.uk-form-icon.uk-margin-small-left#b-discount
+            if type == 1
+              i.uk-icon-percent
+            else
+              i.uk-icon-rub
+            input.b-discount#discount(name="discount", type="text", value="#{discount}")
         div.uk-form-row
           div.uk-form-select.uk-button(data-uk-form-select)
             span
