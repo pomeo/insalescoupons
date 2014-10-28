@@ -19,6 +19,7 @@ var express     = require('express'),
     async       = require('async'),
     cc          = require('coupon-code'),
     _           = require('lodash'),
+    array       = require('array'),
     winston     = require('winston'),
     Logstash    = require('winston-logstash').Logstash,
     logger      = new (winston.Logger)({
