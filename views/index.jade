@@ -15,10 +15,14 @@ block content
           a(href="/opisanie") Описание
       div.uk-navbar-flip
         ul.uk-navbar-nav
-          li
-            a(href="#changelog", data-uk-offcanvas) Изменения
-          li
-            a(href="#predlojeniya", data-uk-offcanvas) Предложения
+          li.uk-parent(data-uk-dropdown)
+            a.uk-navbar-toggle.b-more(href="#more")
+            div.uk-dropdown.uk-dropdown-navbar.b-dropdown
+              ul.uk-nav.uk-nav-navbar
+                li
+                  a(href="#changelog", data-uk-offcanvas) Изменения в приложении
+                li
+                  a(href="#predlojeniya", data-uk-offcanvas) Отзывы и предложения
   div#predlojeniya.uk-offcanvas
     div.uk-offcanvas-bar.uk-offcanvas-bar-flip
       div#kament_comments
