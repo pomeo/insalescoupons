@@ -34,6 +34,8 @@ var express     = require('express'),
     }),
     debugOn     = true;
 
+jobs.promote(600,1);
+
 router.get('/', function(req, res) {
   if (req.query.token && (req.query.token !== '')) {
     Apps.findOne({autologin:req.query.token}, function(err, a) {
