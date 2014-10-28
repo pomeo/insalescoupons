@@ -105,6 +105,17 @@ module.exports = router;
 
 mongoose.connect('mongodb://' + process.env.mongo + '/coupons');
 
+var TasksSchema = new Schema();
+
+TasksSchema.add({
+  type        : { type: Number, index: true },
+  status      : Number,
+  groupid     : String,
+  grouptype   : Number,
+  created_at  : Date,
+  updated_at  : Date
+});
+
 var SettingsSchema = new Schema();
 
 SettingsSchema.add({
