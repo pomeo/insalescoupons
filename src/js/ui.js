@@ -58,3 +58,15 @@ $(document).ready(function() {
       $("#coupon-sample").html(data);
     });
   };
+  $("select[name='typediscount']").change(function() {
+    if ($("select[name='typediscount']").val() == 1) {
+      $(".uk-icon-percent").remove();
+      $(".uk-icon-rub").remove();
+      $("#b-discount").prepend("<i class='uk-icon-percent'></i>");
+    } else {
+      $(".uk-icon-percent").remove();
+      $(".uk-icon-rub").remove();
+      $("#b-discount").prepend("<i class='uk-icon-rub'></i>");
+    }
+  });
+});
