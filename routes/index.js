@@ -136,12 +136,12 @@ AppsSchema.add({
   token       : String,
   autologin   : String,
   settings    : [SettingsSchema],
+  coupons     : [CouponsSchema],
   created_at  : Date,
   updated_at  : Date,
   enabled     : Boolean
 });
 
-var Coupons = mongoose.model('Coupons', CouponsSchema);
 var Apps = mongoose.model('Apps', AppsSchema);
 
 //Логгер в одном месте, для упрощения перезда на любой логгер.
