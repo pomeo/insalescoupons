@@ -139,15 +139,20 @@ SettingsSchema.add({
 var CouponsSchema = new Schema();
 
 CouponsSchema.add({
-  guid        : { type: Number, index: true },
-  сode        : String,
-  description : String,
-  typeid      : Number,
-  discount    : Number,
-  expired_at  : Date,
-  created_at  : Date,
-  updated_at  : Date,
-  enabled     : Boolean
+  guid                : { type: Number, index: true },
+  сode                : String,
+  description         : String,
+  act                 : Boolean,
+  actclient           : Boolean,
+  typeid              : Number,
+  discount            : Number,
+  minprice            : Number,
+  worked              : Boolean,
+  discountcollections : Array,
+  expired_at          : Date,
+  created_at          : Date,
+  updated_at          : Date,
+  disabled            : Boolean
 });
 
 var AppsSchema = new Schema();
