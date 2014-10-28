@@ -360,6 +360,38 @@ function createCoupon(job, done) {
     });
   });
 }
+
+jobs.process('coupons', function(job, done) {
+  if (job.data.type === 1) {
+    for (var i = 0; i < job.data.numbers; i++) {
+      jobs.create('coupons', {
+        id: job.data.id,
+        type: 2, // создание заданий на создание каждого конкретного купона
+        coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
+        act: job.data.act,
+        variant: job.data.variants,
+        discount: job.data.discount,
+        typediscount: job.data.typediscount,
+        until: job.data.until
+      }).delay(1).priority('normal').save();
+    }
+    done();
+  } else if (job.data.type === 2) {
+    if (job.data.variant === 1) {
+      log(job.data);
+      done();
+    } else if (job.data.variant === 2) {
+      createCoupon(job, done);
+    } else if (job.data.variant === 3) {
+      log(job.data);
+      done();
+    } else if (job.data.variant === 4) {
+      log(job.data);
+      done();
+    }
+  }
+});
+
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
     Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
