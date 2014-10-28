@@ -47,7 +47,7 @@ block content
    | (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(node);
    | })();
   div.uk-container-center.b-main
-    form.uk-form.uk-margin-top
+    form.uk-form.uk-margin-top#coupons-generate(method="post", action="/generate")
       fieldset(data-uk-margin)
         legend Создать купоны
         div.uk-form-row
