@@ -331,6 +331,35 @@ router.get('/sample', function(req, res) {
     res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
   }
 })
+
+function createCoupon(job, done) {
+  Apps.findOne({insalesid:job.data.id}, function(err, app) {
+    log(job.data);
+    var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
+               + '<discount_code>'
+               + '<code>' + job.data.coupon + '</code>'
+               + '<act_once>' + job.data.act + '</act_once>'
+               + '<discount>' + job.data.discount + '</discount>'
+               + '<type_id>' + job.data.typediscount + '</type_id>'
+               + '<description>генератор купонов</description>'
+               + '<disabled>0</disabled>'
+               + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY').format('YYYY-MM-DD') + '</expired-at>'
+               + '</discount_code>';
+    rest.post('http://' + process.env.insalesid + ':' + a.token + '@' + a.insalesurl + '/admin/discount_codes.xml', {
+      data: coupon,
+      headers: {'Content-Type': 'application/xml'}
+    }).once('complete', function(o) {
+      if (o.errors) {
+        log('Ошибка');
+        log(o);
+        done();
+      } else {
+        log(o);
+        done();
+      }
+    });
+  });
+}
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
     Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
