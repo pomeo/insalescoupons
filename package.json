@@ -26,6 +26,7 @@
     "q": "^1.0.1",
     "restler": "pomeo/restler",
     "serve-favicon": "^2.1.5",
+    "strong-agent": "^1.0.3",
     "winston": "^0.8.0",
     "winston-logstash": "^0.1.11",
     "xml2js": "^0.4.4"
