@@ -1,3 +1,4 @@
+require('strong-agent').profile();
 var express = require('express');
 var debug = require('debug')('coupons');
 var session = require('express-session');
