@@ -32,7 +32,6 @@ var express     = require('express'),
         })
       ]
     }),
-    debugOn     = true;
 
 jobs.promote(610,1);
 
