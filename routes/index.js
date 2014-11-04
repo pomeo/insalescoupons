@@ -21,17 +21,25 @@ var express     = require('express'),
     _           = require('lodash'),
     array       = require('array'),
     winston     = require('winston'),
-    Logstash    = require('winston-logstash').Logstash,
-    logger      = new (winston.Logger)({
-      transports: [
-        new (winston.transports.Console)(),
-        new (Logstash)({
-          port: 28777,
-          node_name: 'coupons',
-          host: process.env.logstash
-        })
-      ]
-    }),
+    Loggly      = require('winston-loggly').Loggly
+
+if (process.env.NODE_ENV === 'development') {
+  var logger = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)()
+    ]
+  });
+} else {
+  var logger = new (winston.Logger)({
+    transports: [
+      new (Loggly)({
+        subdomain: process.env.loggly_subdomain,
+        inputToken: process.env.loggly_token,
+        tags: ['coupons']
+      })
+    ]
+  });
+}
 
 jobs.promote(610,1);
 
