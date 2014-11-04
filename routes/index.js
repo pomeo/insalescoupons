@@ -530,11 +530,9 @@ var Apps = mongoose.model('Apps', AppsSchema);
 //Логгер в одном месте, для упрощения перезда на любой логгер.
 function log(logMsg, logType) {
   if (logMsg instanceof Error) logger.error(logMsg.stack);
-  if (debugOn) {
-    if (logType !== undefined) {
-      logger.log(logType, logMsg);
-    } else {
-      logger.info(logMsg);
-    }
+  if (logType !== undefined) {
+    logger.log(logType, logMsg);
+  } else {
+    logger.info(logMsg);
   }
 };
