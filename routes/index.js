@@ -87,31 +87,25 @@ router.get('/', function(req, res) {
                    }
                  });
             } else {
-              expired = '01.01.2016';
+              log('Авторизация ' + req.query.insales_id);
+              var id = hat();
+              app.autologin = crypto.createHash('md5')
+                              .update(id + app.token)
+                              .digest('hex');
+              app.save(function (err) {
+                if (err) {
+                  res.send(err, 500);
+                } else {
+                  res.redirect('http://' + app.insalesurl
+                              + '/admin/applications/'
+                              + process.env.insalesid
+                              + '/login?token='
+                              + id
+                              + '&login=http://localhost');
+                }
+              });
             }
-            res.render('index', {
-              title    : '',
-              number   : number,
-              parts    : parts,
-              length   : length,
-              act      : act,
-              variants : variants,
-              type     : type,
-              discount : discount,
-              expired  : expired
-            });
-          } else {
-            log('Авторизация ' + req.query.insales_id, 'info');
-            var id = hat();
-            app.autologin = crypto.createHash('md5').update(id + app.token).digest('hex');
-            app.save(function (err) {
-              if (err) {
-                res.send(err, 500);
-              } else {
-                res.redirect('http://' + app.insalesurl + '/admin/applications/' + process.env.insalesid + '/login?token=' + id + '&login=http://localhost');
-              }
-            });
-          }
+          });
         } else {
           res.send('Приложение не установлено для данного магазина', 403);
         }
