@@ -57,7 +57,9 @@ router.get('/', function(req, res) {
   } else {
     var insid = req.session.insalesid || req.query.insales_id;
     log('Попытка входа магазина: ' + insid);
-    if ((req.query.insales_id && (req.query.insales_id !== '')) || req.session.insalesid !== undefined) {
+    if ((req.query.insales_id &&
+         (req.query.insales_id !== '')) ||
+        req.session.insalesid !== undefined) {
       Apps.findOne({insalesid:insid}, function(err, app) {
         if (app.enabled == true) {
           Settings.find({insalesid:insid}, function(err, settings) {
@@ -374,7 +376,9 @@ router.get('/install', function(req, res) {
         if (a.enabled == true) {
           res.send('Приложение уже установленно', 403);
         } else {
-          a.token = crypto.createHash('md5').update(req.query.token + process.env.insalessecret).digest('hex');
+          a.token = crypto.createHash('md5')
+                    .update(req.query.token + process.env.insalessecret)
+                    .digest('hex');
           a.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
           a.enabled = true;
           a.save(function (err) {
@@ -393,7 +397,12 @@ router.get('/install', function(req, res) {
 });
 
 router.get('/uninstall', function(req, res) {
-  if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
+  if ((req.query.shop !== '') &&
+      (req.query.token !== '') &&
+      (req.query.insales_id !== '') &&
+      req.query.shop &&
+      req.query.token &&
+      req.query.insales_id) {
     Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
       if (a.token == req.query.token) {
         a.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
