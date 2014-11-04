@@ -52,79 +52,30 @@ router.get('/', function(req, res) {
     if ((req.query.insales_id && (req.query.insales_id !== '')) || req.session.insalesid !== undefined) {
       Apps.findOne({insalesid:insid}, function(err, app) {
         if (app.enabled == true) {
-          if (req.session.insalesid) {
-            var n = -1;
-            var number;
-            var p = -1;
-            var parts;
-            var l = -1;
-            var length;
-            var v = -1;
-            var act;
-            var a = -1;
-            var variants;
-            var t = -1;
-            var type;
-            var d = -1;
-            var discount;
-            var u = -1;
-            var expired;
-            for (var i = 0; i < app.settings.length; ++i) {
-              if (app.settings[i].property == 'coupon-number') {
-                n = app.settings[i].value;
-              } else if (app.settings[i].property == 'coupon-parts') {
-                p = app.settings[i].value;
-              } else if (app.settings[i].property == 'coupon-part-length') {
-                l = app.settings[i].value;
-              } else if (app.settings[i].property == 'coupon-act') {
-                a = app.settings[i].value;
-              } else if (app.settings[i].property == 'coupon-variants') {
-                v = app.settings[i].value;
-              } else if (app.settings[i].property == 'type-discount') {
-                t = app.settings[i].value;
-              } else if (app.settings[i].property == 'discount') {
-                d = app.settings[i].value;
-              } else if (app.settings[i].property == 'coupon-expired') {
-                u = app.settings[i].value;
-              }
-            }
-            if (n !== -1) {
-              number = n;
-            } else {
-              number = 5;
-            }
-            if (p !== -1) {
-              parts = p;
-            } else {
-              parts = 3;
-            }
-            if (l !== -1) {
-              length = l;
-            } else {
-              length = 6;
-            }
-            if (a !== -1) {
-              act = a;
-            } else {
-              act = 1;
-            }
-            if (v !== -1) {
-              variants = v;
-            } else {
-              variants = 1;
-            }
-            if (t !== -1) {
-              type = t;
-            } else {
-              type = 1;
-            }
-            if (d !== -1) {
-              discount = d;
-            } else {
-              discount = '';
-            }
-            if (u !== -1) {
-              expired = u;
+          Settings.find({insalesid:insid}, function(err, settings) {
+            if (req.session.insalesid) {
+              var sett = {};
+              async.each(settings, function(s, callback) {
+                sett[s.property] = s.value;
+                callback();
+              }, function(e) {
+                   if (e) {
+                     log('Ошибка во время работы async. Вывод свойств формы генерации в шаблон', 'error');
+                     log(e, 'error');
+                   } else {
+                     res.render('index', {
+                       title    : '',
+                       number   : typeof sett['coupon-number'] !== 'undefined' ? sett['coupon-number'] : 5,
+                       parts    : typeof sett['coupon-parts'] !== 'undefined' ? sett['coupon-parts'] : 3,
+                       length   : typeof sett['coupon-part-lengths'] !== 'undefined' ? sett['coupon-part-lengths'] : 6,
+                       act      : typeof sett['coupon-act'] !== 'undefined' ? sett['coupon-act'] : 1,
+                       variants : typeof sett['coupon-variants'] !== 'undefined' ? sett['coupon-variants'] : 1,
+                       type     : typeof sett['coupon-type-discount'] !== 'undefined' ? sett['coupon-type-discount'] : 1,
+                       discount : typeof sett['coupon-discount'] !== 'undefined' ? sett['coupon-discount'] : '',
+                       expired  : typeof sett['coupon-until'] !== 'undefined' ? sett['coupon-until'] : '01.01.2016'
+                     });
+                   }
+                 });
             } else {
               expired = '01.01.2016';
             }
