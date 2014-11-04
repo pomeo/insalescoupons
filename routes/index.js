@@ -34,7 +34,7 @@ var express     = require('express'),
     }),
     debugOn     = true;
 
-jobs.promote(600,1);
+jobs.promote(610,1);
 
 router.get('/', function(req, res) {
   if (req.query.token && (req.query.token !== '')) {
