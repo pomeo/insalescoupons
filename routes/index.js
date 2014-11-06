@@ -48,9 +48,11 @@ router.get('/', function(req, res) {
   if (req.query.token && (req.query.token !== '')) {
     Apps.findOne({autologin:req.query.token}, function(err, a) {
       if (a) {
+        log('Создаём сессию и перебрасываем на главную');
         req.session.insalesid = a.insalesid;
         res.redirect('/');
       } else {
+        log('Ошибка автологина. Неправильный token при переходе из insales', 'warn')
         res.send('Ошибка автологина', 403);
       }
     });
