@@ -424,67 +424,73 @@ mongoose.connect('mongodb://' + process.env.mongo + '/coupons');
 var CollectionsSchema = new Schema();
 
 CollectionsSchema.add({
-  type        : { type: Number, index: true },
-  status      : Number,
-  groupid     : String,
-  grouptype   : Number,
-  created_at  : Date,
-  updated_at  : Date
+  insalesid   : { type: Number, index: true }, // id магазина
+  colid       : { type: Number, index: true }, // id категории
+  name        : String, // название категории
+  parentid    : { type: Number, index: true }, // id родительской категории
+  created_at  : Date, // дата создания категории
+  updated_at  : Date // дата изменения категории
 });
+
+var Collections = mongoose.model('Collections', CollectionsSchema);
 
 var TasksSchema = new Schema();
 
 TasksSchema.add({
-  type        : { type: Number, index: true },
-  status      : Number,
-  groupid     : String,
-  grouptype   : Number,
-  created_at  : Date,
-  updated_at  : Date
+  insalesid   : { type: Number, index: true }, // id магазина
+  type        : { type: Number, index: true }, // тип задания
+  status      : Number, // статус задания
+  groupid     : String, // id группы в цепочке заданий
+  created_at  : Date, // дата создания
+  updated_at  : Date // дата изменения
 });
+
+var Tasks = mongoose.model('Tasks', TasksSchema);
 
 var SettingsSchema = new Schema();
 
 SettingsSchema.add({
-  property    : { type: String, index: true },
-  value       : String,
-  created_at  : Date,
-  updated_at  : Date
+  insalesid   : { type: Number, index: true }, // id магазина
+  property    : { type: String, index: true }, // свойство
+  value       : String, // значение свойства
+  created_at  : Date, // дата создания
+  updated_at  : Date // дата изменения
 });
+
+var Settings = mongoose.model('Settings', SettingsSchema);
 
 var CouponsSchema = new Schema();
 
 CouponsSchema.add({
-  guid                : { type: Number, index: true },
-  сode                : String,
-  description         : String,
-  act                 : Boolean,
-  actclient           : Boolean,
-  typeid              : Number,
-  discount            : Number,
-  minprice            : Number,
-  worked              : Boolean,
-  discountcollections : Array,
-  expired_at          : Date,
-  created_at          : Date,
-  updated_at          : Date,
-  disabled            : Boolean
+  insalesid           : { type: Number, index: true }, // id магазина
+  guid                : { type: Number, index: true }, // id купона
+  сode                : String, // код купона
+  description         : String, // описание купона
+  act                 : Boolean, // одноразовый или многоразовый купон
+  actclient           : Boolean, // одноразовый для зарегистрированного покупателя
+  typeid              : Number, // тип скидки
+  discount            : Number, // размер скидки
+  minprice            : Number, // минимальная цена при которой купон не раборает
+  worked              : Boolean, // использованный купон или нет
+  discountcollections : Array, // массив id разделов
+  expired_at          : Date, // дата истечения купона, от insales
+  created_at          : Date, // дата создания купона, от insales
+  updated_at          : Date, // дата обновления купона, от insales
+  disabled            : Boolean // активный/неактивный купон
 });
+
+var Coupons = mongoose.model('Coupons', CouponsSchema);
 
 var AppsSchema = new Schema();
 
 AppsSchema.add({
-  insalesid   : { type: String, unique: true },
-  insalesurl  : String,
-  token       : String,
-  autologin   : String,
-  settings    : [SettingsSchema],
-  coupons     : [CouponsSchema],
-  tasks       : [TasksSchema],
-  collections : [CollectionsSchema],
-  created_at  : Date,
-  updated_at  : Date,
-  enabled     : Boolean
+  insalesid   : { type: Number, unique: true }, // id магазина
+  insalesurl  : String, // урл магазина
+  token       : String, // ключ доступа к api
+  autologin   : String, // сохраняется ключ автологина
+  created_at  : Date, // дата создания записи
+  updated_at  : Date, // дата изменения записи
+  enabled     : Boolean // установлено или нет приложение для магазина
 });
 
 var Apps = mongoose.model('Apps', AppsSchema);
