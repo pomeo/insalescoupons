@@ -439,6 +439,17 @@ ChargesSchema.add({
 
 var Charges = mongoose.model('Charges', ChargesSchema);
 
+var GroupsSchema = new Schema();
+
+GroupsSchema.add({
+  insalesid   : { type: Number, index: true }, // id магазина
+  groupid     : { type: String, unique: true }, // id группы
+  groupname   : { type: String, index: true }, // название группы
+  created_at  : Date // дата создания группы
+});
+
+var Groups = mongoose.model('Groups', GroupsSchema);
+
 var CollectionsSchema = new Schema();
 
 CollectionsSchema.add({
