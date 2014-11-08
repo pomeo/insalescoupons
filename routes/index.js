@@ -294,11 +294,48 @@ router.get('/sample', function(req, res) {
     var l = parseInt(req.param('length'));
     if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
       res.json(cc.generate({ parts: p, partLen: l }));
+
+function deleteCoupons(job) {
+  Apps.findOne({insalesid:job.data.id}, function(err, app) {
+    if (app.enabled == true) {
+      rest.del('http://' + process.env.insalesid + ':'
+              + app.token + '@'
+              + app.insalesurl
+              + '/admin/discount_codes/'
+              + job.data.couponid + '.xml', {
+                headers: {'Content-Type': 'application/xml'}
+              }).once('complete', function(o) {
+        if (o !== null && o.errors) {
+          log('Ошибка ' + JSON.stringify(o));
+          var re = new RegExp(job.data.couponid,"g");
+          if (o.errors.error.match(re)) {
+            Coupons.findOneAndRemove({
+              guid: job.data.couponid
+            }, function (err, r){
+                 if (err) {
+                   log('Ошибка');
+                 } else {
+                   log('Удалён купон из магазина и базы приложения');
+                 }
+               });
+          }
+        } else {
+          Coupons.findOneAndRemove({
+            guid: job.data.couponid
+          }, function (err, r){
+               if (err) {
+                 log('Ошибка');
+               } else {
+                 log('Удалён купон из магазина и базы приложения');
+               }
+             });
+        }
+      });
     } else {
-      res.json('ошибка запроса');
+      log('Приложение не установлено для данного магазина');
     }
-  } else {
-    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+  });
+}
   }
 })
 
