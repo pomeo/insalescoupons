@@ -269,42 +269,100 @@ function createJobGetCoupons(job) {
   }).delay(1).priority('critical').save();
 }
 
+function getCouponsFromShop(job) {
+  Apps.findOne({insalesid:job.data.id}, function(err, app) {
+    if (app.enabled == true) {
+      rest.get('http://' + process.env.insalesid
+              + ':'
+              + app.token
+              + '@'
+              + app.insalesurl
+              + '/admin/discount_codes.xml', {
+                query: {
+                  page: job.data.page,
+                  per_page: 250
+                },
+                headers: {'Content-Type': 'application/xml'}
+              }).once('complete', function(o) {
+        if (o instanceof Error) {
+          log('Error:', o.message);
+          this.retry(5000);
         } else {
-          app.settings.push({
-            property    : 'coupon-expired',
-            value       : u,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        app.save(function (e) {
-          if (e) {
-            res.send(e, 500);
+          if (o.errors) {
+            log('Ошибка');
           } else {
-            jobs.create('coupons', {
-              id: req.session.insalesid,
-              type: 1, //создание задания на создание купонов
-              numbers: n,
-              parts: p,
-              length: l,
-              act: a,
-              variants: v,
-              typediscount: t,
-              discount: d,
-              until: u,
-              group: g
-            }).delay(1).priority('critical').save();
-            res.send('success');
+            if (typeof o['discount-codes'] === 'undefined') {
+              log(job.data);
+              if ((job.data.variant === 1) ||
+                  (job.data.variant === 3) ||
+                  (job.data.variant === 4)) {
+                createJobDeleteCoupons(job);
+              } else if (job.data.variant === 2) {
+                createJobCreateCoupons(job);
+              } else {
+                log('Конец');
+              }
+            } else {
+              var coupon = new Coupons();
+              async.each(o['discount-codes']['discount-code'], function(coup, callback) {
+                var coupon = new Coupons({
+                  insalesid           : job.data.id,
+                  guid                : coup['id'],
+                  сode                : coup['code'],
+                  description         : coup['description'],
+                  act                 : coup['act-once'],
+                  actclient           : coup['act-once-for-client'],
+                  typeid              : coup['type-id'],
+                  discount            : coup['discount'],
+                  minprice            : coup['min-price'],
+                  worked              : coup['worked'],
+                  //discountcollections : coup['discount-collections'],
+                  expired_at          : coup['expired-at'],
+                  created_at          : coup['created-at'],
+                  updated_at          : coup['updated-at'],
+                  disabled            : coup['disabled']
+                });
+                coupon.save(function (err) {
+                  if (err) {
+                    log('Ошибка');
+                    log(err);
+                    callback();
+                  } else {
+                    log('Сохранён купон из магазина в базу приложения');
+                    callback();
+                  }
+                });
+              }, function(e) {
+                   if (e) {
+                     log('A coupons failed to process');
+                   } else {
+                     log('All coupons have been processed successfully ' + job.data.page);
+                     job.data.page++;
+                     jobs.create('coupons', {
+                       id: job.data.id,
+                       page: job.data.page,
+                       type: 3,
+                       numbers: job.data.numbers,
+                       parts: job.data.parts,
+                       length: job.data.length,
+                       act: job.data.act,
+                       variant: job.data.variant,
+                       typediscount: job.data.typediscount,
+                       discount: job.data.discount,
+                       until: job.data.until,
+                       group: job.data.group
+                     }).delay(600).priority('high').save();
+                   }
+                 });
+            }
           }
-        });
+        }
       });
     } else {
-      res.send('ошибка');
+      log('Приложение не установлено для данного магазина');
     }
-  } else {
-    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
-  }
-})
+  });
+}
 
 router.get('/sample', function(req, res) {
   if (req.session.insalesid) {
