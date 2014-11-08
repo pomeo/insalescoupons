@@ -120,113 +120,108 @@ router.get('/', function(req, res) {
 
 router.post('/generate', function(req, res) {
   if (req.session.insalesid) {
-    var n = parseInt(req.param('c-num'));
-    var n_exist = -1;
-    var p = parseInt(req.param('c-part'));
-    var p_exist = -1;
-    var l = parseInt(req.param('c-partlen'));
-    var l_exist = -1;
-    var a = parseInt(req.param('act'));
-    var a_exist = -1;
-    var v = parseInt(req.param('variants'));
-    var v_exist = -1;
-    var t = parseInt(req.param('typediscount'));
-    var t_exist = -1;
-    var d = parseFloat(req.param('discount'));
-    var d_exist = -1;
-    var u = moment(req.param('until'), 'DD.MM.YYYY').format('DD.MM.YYYY');
-    var u_exist = -1;
-    var g = req.param('group');
-    if ((n >= 1) && (n <= 10000) && (p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
-      Apps.findOne({insalesid:req.session.insalesid}, function(err, app) {
-        for (var i = 0; i < app.settings.length; ++i) {
-          if (app.settings[i].property == 'coupon-number') {
-            n_exist = i;
-          } else if (app.settings[i].property == 'coupon-parts') {
-            p_exist = i;
-          } else if (app.settings[i].property == 'coupon-part-length') {
-            l_exist = i;
-          } else if (app.settings[i].property == 'coupon-act') {
-            a_exist = i;
-          } else if (app.settings[i].property == 'coupon-variants') {
-            v_exist = i;
-          } else if (app.settings[i].property == 'type-discount') {
-            t_exist = i;
-          } else if (app.settings[i].property == 'discount') {
-            d_exist = i;
-          } else if (app.settings[i].property == 'coupon-expired') {
-            u_exist = i;
-          }
-        }
-        if (n_exist !== -1) {
-          app.settings[n_exist].value = n;
-          app.settings[n_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'coupon-number',
-            value       : n,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (p_exist !== -1) {
-          app.settings[p_exist].value = p;
-          app.settings[p_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'coupon-parts',
-            value       : p,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (l_exist !== -1) {
-          app.settings[l_exist].value = l;
-          app.settings[l_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'coupon-part-length',
-            value       : l,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (a_exist !== -1) {
-          app.settings[a_exist].value = a;
-          app.settings[a_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'coupon-act',
-            value       : a,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (v_exist !== -1) {
-          app.settings[v_exist].value = v;
-          app.settings[v_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'coupon-variants',
-            value       : v,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (t_exist !== -1) {
-          app.settings[t_exist].value = t;
-          app.settings[t_exist].updated_at = new Date();
-        } else {
-          app.settings.push({
-            property    : 'type-discount',
-            value       : t,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
-        }
-        if (d_exist !== -1) {
-          app.settings[d_exist].value = d;
-          app.settings[d_exist].updated_at = new Date();
+    Apps.findOne({
+      insalesid:req.session.insalesid
+    }, function(err, app) {
+         if (app.enabled == true) {
+           var form = {
+             'coupon-number': parseInt(req.param('c-num')),
+             'coupon-parts': parseInt(req.param('c-part')),
+             'coupon-part-lengths': parseInt(req.param('c-partlen')),
+             'coupon-act': parseInt(req.param('act')),
+             'coupon-variants': parseInt(req.param('variants')),
+             'coupon-type-discount': parseInt(req.param('typediscount')),
+             'coupon-discount': parseFloat(req.param('discount')),
+             'coupon-until': moment(req.param('until'), 'DD.MM.YYYY')
+                      .format('DD.MM.YYYY'),
+             'coupon-group': req.param('group')
+           };
+           var exist = {
+             'coupon-number': -1,
+             'coupon-parts': -1,
+             'coupon-part-lengths': -1,
+             'coupon-act': -1,
+             'coupon-variants': -1,
+             'coupon-type-discount': -1,
+             'coupon-discount': -1,
+             'coupon-until': -1
+           };
+           if ((form['coupon-number'] >= 1) &&
+               (form['coupon-number'] <= 10000) &&
+               (form['coupon-parts'] >= 1) &&
+               (form['coupon-parts'] <= 5) &&
+               (form['coupon-part-lengths'] >= 4) &&
+               (form['coupon-part-lengths'] <= 10)) {
+             Settings.find({
+               insalesid:req.session.insalesid
+             }, function(err, settings) {
+                  async.each(settings, function(s, callback) {
+                    s.value = form[s.property];
+                    s.updated_at = new Date();
+                    s.save(function (err) {
+                      if (err) {
+                        log('Ошибка сохранения', 'error');
+                        log(err, 'error');
+                        callback();
+                      } else {
+                        exist[s.property] = 1;
+                        log('Ok');
+                        callback();
+                      }
+                    });
+                  }, function(e) {
+                       if (e) {
+                         log('A coupons failed to process');
+                       } else {
+                         for (var prop in exist) {
+                           if (exist[prop] == -1) {
+                             var sett = new Settings({
+                               insalesid   : req.session.insalesid,
+                               property    : prop,
+                               value       : form[prop],
+                               created_at  : new Date(),
+                               updated_at  : new Date()
+                             });
+                             sett.save(function (err) {
+                               if (err) {
+                                 log('Ошибка');
+                                 log(err);
+                               } else {
+                                 log('Ok');
+                               }
+                             });
+                           }
+                         }
+                         jobs.create('coupons', {
+                           id: req.session.insalesid,
+                           type: 1,
+                           numbers: form['coupon-number'],
+                           parts: form['coupon-parts'],
+                           length: form['coupon-part-lengths'],
+                           act: form['coupon-act'],
+                           variant: form['coupon-variants'],
+                           typediscount: form['coupon-type-discount'],
+                           discount: form['coupon-discount'],
+                           until: form['coupon-until'],
+                           group: form['coupon-group']
+                         }).delay(600).priority('critical').save();
+                         log('Done');
+                         res.json('success');
+                       }
+                     });
+                });
+           } else {
+             res.send('ошибка');
+           }
+         } else {
+           res.send('Приложение не установлено для данного магазина', 403);
+         }
+       });
+  } else {
+    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+  }
+})
+
         } else {
           app.settings.push({
             property    : 'discount',
