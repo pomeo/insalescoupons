@@ -423,6 +423,22 @@ module.exports = router;
 
 mongoose.connect('mongodb://' + process.env.mongo + '/coupons');
 
+var ChargesSchema = new Schema();
+
+ChargesSchema.add({
+  insalesid        : { type: Number, index: true }, // id магазина
+  guid             : { type: Number, index: true }, // id списания
+  type             : Number, // для себя, платит магазин за приложение или нет
+  monthly          : Number, // сумма
+  blocked          : Boolean, //
+  paid_till        : Date, // заплатить до этой даты
+  trial_expired_at : Date, // триал заканчивается в эту дату
+  updated_at       : Date, // дата из ответа insales
+  created_at       : Date // дата из ответа insales
+});
+
+var Charges = mongoose.model('Charges', ChargesSchema);
+
 var CollectionsSchema = new Schema();
 
 CollectionsSchema.add({
