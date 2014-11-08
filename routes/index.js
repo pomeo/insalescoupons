@@ -435,8 +435,20 @@ function deleteCoupons(job) {
     }
   });
 }
+
+function createJobCreateCoupons(job) {
+  for (var i = 0; i < job.data.numbers; i++) {
+    jobs.create('coupons', {
+      id: job.data.id,
+      type: 2,
+      coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
+      act: job.data.act,
+      discount: job.data.discount,
+      typediscount: job.data.typediscount,
+      until: job.data.until
+    }).delay(1).priority('normal').save();
   }
-})
+}
 
 function createCoupons(job) {
   Apps.findOne({insalesid:job.data.id}, function(err, app) {
