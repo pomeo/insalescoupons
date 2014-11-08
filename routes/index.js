@@ -233,6 +233,24 @@ router.post('/generate', function(req, res) {
         if (u_exist !== -1) {
           app.settings[u_exist].value = u;
           app.settings[u_exist].updated_at = new Date();
+
+function createJobGetCoupons(job) {
+  jobs.create('coupons', {
+    id: job.data.id,
+    page: 1,
+    type: 3,
+    numbers: job.data.numbers,
+    parts: job.data.parts,
+    length: job.data.length,
+    act: job.data.act,
+    variant: job.data.variant,
+    typediscount: job.data.typediscount,
+    discount: job.data.discount,
+    until: job.data.until,
+    group: job.data.group
+  }).delay(1).priority('critical').save();
+}
+
         } else {
           app.settings.push({
             property    : 'coupon-expired',
