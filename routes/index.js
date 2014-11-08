@@ -553,13 +553,20 @@ jobs.process('coupons', function(job, done) {
 });
 
 router.get('/install', function(req, res) {
-  if ((req.query.shop !== '') && (req.query.token !== '') && (req.query.insales_id !== '') && req.query.shop && req.query.token && req.query.insales_id) {
+  if ((req.query.shop !== '') &&
+      (req.query.token !== '') &&
+      (req.query.insales_id !== '') &&
+      req.query.shop &&
+      req.query.token &&
+      req.query.insales_id) {
     Apps.findOne({insalesid:req.query.insales_id}, function(err, a) {
       if (a == null) {
         var app = new Apps({
           insalesid  : req.query.insales_id,
           insalesurl : req.query.shop,
-          token      : crypto.createHash('md5').update(req.query.token + process.env.insalessecret).digest('hex'),
+          token      : crypto.createHash('md5')
+                       .update(req.query.token + process.env.insalessecret)
+                       .digest('hex'),
           created_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
           updated_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
           enabled    : true
