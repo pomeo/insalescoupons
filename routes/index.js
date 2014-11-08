@@ -222,17 +222,26 @@ router.post('/generate', function(req, res) {
   }
 })
 
+router.get('/sample', function(req, res) {
+  if (req.session.insalesid) {
+    Apps.findOne({insalesid:req.session.insalesid}, function(err, app) {
+      if (app.enabled == true) {
+        var p = parseInt(req.param('parts'));
+        var l = parseInt(req.param('length'));
+        if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
+          res.json(cc.generate({ parts: p, partLen: l }));
         } else {
-          app.settings.push({
-            property    : 'discount',
-            value       : d,
-            created_at  : new Date(),
-            updated_at  : new Date()
-          });
+          res.json('ошибка запроса');
         }
-        if (u_exist !== -1) {
-          app.settings[u_exist].value = u;
-          app.settings[u_exist].updated_at = new Date();
+      } else {
+        res.send('Приложение не установлено для данного магазина', 403);
+      }
+    });
+  } else {
+    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+  }
+})
+
 
 function createJobGetCoupons(job) {
   jobs.create('coupons', {
