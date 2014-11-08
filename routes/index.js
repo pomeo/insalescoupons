@@ -242,6 +242,15 @@ router.get('/sample', function(req, res) {
   }
 })
 
+function deleteCouponsFromApp(job) {
+  Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
+    if (err) {
+      log('Ошибка');
+    } else {
+      log('Удалены купоны из базы приложения');
+    }
+  });
+}
 
 function createJobGetCoupons(job) {
   jobs.create('coupons', {
