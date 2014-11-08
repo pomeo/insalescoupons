@@ -364,12 +364,35 @@ function getCouponsFromShop(job) {
   });
 }
 
-router.get('/sample', function(req, res) {
-  if (req.session.insalesid) {
-    var p = parseInt(req.param('parts'));
-    var l = parseInt(req.param('length'));
-    if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
-      res.json(cc.generate({ parts: p, partLen: l }));
+function createJobDeleteCoupons(job) {
+  Coupons.find({
+    insalesid:job.data.id
+  }, function(err, coupons) {
+       async.each(coupons, function(coup, callback) {
+         jobs.create('coupons', {
+           id: job.data.id,
+           couponid: coup.guid,
+           type: 4,
+           numbers: job.data.numbers,
+           parts: job.data.parts,
+           length: job.data.length,
+           act: job.data.act,
+           variant: job.data.variant,
+           typediscount: job.data.typediscount,
+           discount: job.data.discount,
+           until: job.data.until,
+           group: job.data.group
+         }).delay(600).priority('medium').save();
+         callback();
+       }, function(e) {
+            if (e) {
+              log('Ошибка');
+            } else {
+              createJobCreateCoupons(job);
+            }
+          });
+     });
+}
 
 function deleteCoupons(job) {
   Apps.findOne({insalesid:job.data.id}, function(err, app) {
