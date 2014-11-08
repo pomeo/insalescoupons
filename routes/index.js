@@ -438,32 +438,67 @@ function deleteCoupons(job) {
   }
 })
 
-function createCoupon(job, done) {
+function createCoupons(job) {
   Apps.findOne({insalesid:job.data.id}, function(err, app) {
-    log(job.data);
-    var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
-               + '<discount_code>'
-               + '<code>' + job.data.coupon + '</code>'
-               + '<act_once>' + job.data.act + '</act_once>'
-               + '<discount>' + job.data.discount + '</discount>'
-               + '<type_id>' + job.data.typediscount + '</type_id>'
-               + '<description>генератор купонов</description>'
-               + '<disabled>0</disabled>'
-               + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY').format('YYYY-MM-DD') + '</expired-at>'
-               + '</discount_code>';
-    rest.post('http://' + process.env.insalesid + ':' + a.token + '@' + a.insalesurl + '/admin/discount_codes.xml', {
-      data: coupon,
-      headers: {'Content-Type': 'application/xml'}
-    }).once('complete', function(o) {
-      if (o.errors) {
-        log('Ошибка');
-        log(o);
-        done();
-      } else {
-        log(o);
-        done();
-      }
-    });
+    if (app.enabled == true) {
+      var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
+                 + '<discount_code>'
+                 + '<code>' + job.data.coupon + '</code>'
+                 + '<act_once>' + job.data.act + '</act_once>'
+                 + '<discount>' + job.data.discount + '</discount>'
+                 + '<type_id>' + job.data.typediscount + '</type_id>'
+                 + '<description>генератор купонов</description>'
+                 + '<disabled>0</disabled>'
+                 + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
+                                    .format('YYYY-MM-DD') + '</expired-at>'
+                 + '</discount_code>';
+      rest.post('http://' + process.env.insalesid + ':'
+               + app.token + '@'
+               + app.insalesurl
+               + '/admin/discount_codes.xml', {
+        data: coupon,
+        headers: {'Content-Type': 'application/xml'}
+      }).once('complete', function(o) {
+        if (o instanceof Error) {
+          log('Error:', o.message);
+          this.retry(5000);
+        } else {
+          if (o.errors) {
+            log('Ошибка');
+            log(o);
+          } else {
+            log(o);
+            var coupon = new Coupons({
+              insalesid           : job.data.id,
+              guid                : o['discount-code']['id'],
+              сode                : o['discount-code']['code'],
+              description         : o['discount-code']['description'],
+              act                 : o['discount-code']['act-once'],
+              actclient           : o['discount-code']['act-once-for-client'],
+              typeid              : o['discount-code']['type-id'],
+              discount            : o['discount-code']['discount'],
+              minprice            : o['discount-code']['min-price'],
+              worked              : o['discount-code']['worked'],
+              //discountcollections : o['discount-code']['discount-collections'],
+              expired_at          : o['discount-code']['expired-at'],
+              created_at          : o['discount-code']['created-at'],
+              updated_at          : o['discount-code']['updated-at'],
+              disabled            : o['discount-code']['disabled']
+            });
+            coupon.save(function (err) {
+              if (err) {
+                log('Ошибка');
+                log(err);
+              } else {
+                log('Создан купон');
+              }
+            });
+          }
+        }
+      });
+    } else {
+      log('Приложение не установлено для данного магазина');
+    }
   });
 }
 
