@@ -13,112 +13,90 @@ block content
           a(href="/zadaniya") Задания
         li
           a(href="/opisanie") Описание
-      div.uk-navbar-flip
-        ul.uk-navbar-nav
-          li.uk-parent(data-uk-dropdown)
-            a.uk-navbar-toggle.b-more(href="#more")
-            div.uk-dropdown.uk-dropdown-navbar.b-dropdown
-              ul.uk-nav.uk-nav-navbar
-                li
-                  a(href="#changelog", data-uk-offcanvas) Изменения в приложении
-                li
-                  a(href="#predlojeniya", data-uk-offcanvas) Отзывы и предложения
-  div#predlojeniya.uk-offcanvas
-    div.uk-offcanvas-bar.uk-offcanvas-bar-flip
-      div#kament_comments
-  div#changelog.uk-offcanvas
-    div.uk-offcanvas-bar.uk-offcanvas-bar-flip
-      div.uk-panel
-        h3.uk-panel-title Panel title
-        | Lorem ipsum dolor sit amet, 
-        a(href="#") consectetur 
-        | adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-      div.uk-panel
-        h3.uk-panel-title Panel title
-        | Lorem ipsum dolor sit amet, 
-        a(href="#") consectetur 
-        | adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-  script(type="text/javascript")
-   | var kament_subdomain = 'salescoupons';
-   | var kament_page_url = 'http://coupons.salesapps.ru';
-   | (function() {
-   | var node = document.createElement('script'); node.type = 'text/javascript'; node.async = true;
-   | node.src = 'http://' + kament_subdomain + '.svkament.ru/js/embed.js';
-   | (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(node);
-   | })();
   div.uk-container-center.b-main
-    form.uk-form.uk-margin-top#coupons-generate(method="post", action="/generate")
-      fieldset(data-uk-margin)
-        legend Создать купоны
-        div.uk-form-row
-          div.uk-form-icon
-            i.uk-icon-hand-o-right
-            input#c-num(name="c-num", type="number", min="1", max="10000", value="#{number}")
-          label.uk-form-label.uk-margin-left(for="c-num") количество купонов (1-10000)
-        div.uk-form-row
-          div.uk-form-icon
-            i.uk-icon-hand-o-right
-            input#c-part(name="c-part", type="number", min="1", max="5", value="#{parts}")
-          label.uk-form-label.uk-margin-left(for="c-part") количество частей (1-5)
-        div.uk-form-row
-          div.uk-form-icon
-            i.uk-icon-hand-o-right
-            input#c-partlen(name="c-partlen", type="number", min="4", max="10", value="#{length}")
-          label.uk-form-label.uk-margin-left(for="c-partlen") длина каждой части (4-10)
-        div.uk-form-row
-          div.uk-form-select.uk-button(data-uk-form-select)
-            span
-            i.uk-icon-caret-down.uk-margin-small-left
-            select#act(name="act")
-              option(value="1" selected = act == 1) одноразовый купон
-              option(value="0" selected = act == 0) многоразовый купон
-        div.uk-form-row
-          div.uk-form-select.uk-button(data-uk-form-select)
-            span
-            i.uk-icon-caret-down.uk-margin-small-left
-            select#typediscount(name="typediscount")
-              option(value="1" selected = type == 1) тип скидки: процент
-              option(value="2" selected = type == 2) тип скидки: денежная величина
-          div.uk-form-icon.uk-margin-small-left#b-discount
-            if type == 1
-              i.uk-icon-percent
-            else
-              i.uk-icon-rub
-            input.b-discount#discount(name="discount", type="text", value="#{discount}")
-        div.uk-form-row
-          div.uk-form-icon
-            i.uk-icon-calendar
-            input#until(name="until", type="text", value="#{expired}", data-uk-datepicker="{format:'DD.MM.YYYY'}")
-          label.uk-form-label.uk-margin-left(for="until") срок действия купонов
-        div.uk-form-row
-          div.uk-form-icon
-            i.uk-icon-copy
-            input#group(name="group", type="text", placeholder="Только буквы и цифры")
-          label.uk-form-label.uk-margin-left(for="group") Название группы купонов(можно не заполнять)
-        div.uk-form-row
-          div.uk-form-select.uk-button(data-uk-form-select)
-            span
-            i.uk-icon-caret-down.uk-margin-small-left
-            select#variants(name="variants")
-              option(value="1" selected = variants == 1) создать новые, удалив все текущие
-              option(value="2" selected = variants == 2) создать новые, добавив к текущим
-              option(value="3" selected = variants == 3) создать новые, удалив только использованные
-              option(value="4" selected = variants == 4) создать новые, удалив только не использованные
-          i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="<ol><li>Будут удалены абсолютно все существующие купоны и созданы новые.</li><li>К существующим купонам будут добавлены новые. Возможные дубли будут игнорироваться.</li><li>Будут удалены использованные купоны из существующих. К оставшимся будут добавлены новые.</li><li>Будут удалены не использованные купоны из существующих. К оставшимся будут добавлены новые.</li></ol>")
-        button.uk-button сгенерировать
-        div.coupon-sample Пример купона:
+    div.b-buttons.uk-container-center.uk-margin-top.uk-margin-bottom
+      button.uk-button.uk-margin-small-right.uk-button-success(type="button", data-uk-modal="{target:'#modal-create'}") Создать купоны
+      button.uk-button.uk-button-primary(type="button", data-uk-modal="{target:'#'}") Синхронизировать купоны
+      button.uk-button.uk-margin-small-left.uk-button-danger(type="button", data-uk-modal="{target:'#modal-delete'}") Удалить купоны
+    div#coupons
+    div#modal-create.uk-modal
+      div.uk-modal-dialog
+        a.uk-modal-close.uk-close
+        form.uk-form#coupons-generate(method="post", action="/generate")
+          fieldset(data-uk-margin)
+            legend Создать купоны
+            div.uk-form-row
+              div.uk-form-icon
+                i.uk-icon-hand-o-right
+                input#c-num(name="c-num", type="number", min="1", max="10000", value="#{number}")
+              label.uk-form-label.uk-margin-left(for="c-num") количество купонов (1-10000)
+            div.uk-form-row
+              div.uk-form-icon
+                i.uk-icon-hand-o-right
+                input#c-part(name="c-part", type="number", min="1", max="5", value="#{parts}")
+              label.uk-form-label.uk-margin-left(for="c-part") количество частей (1-5)
+            div.uk-form-row
+              div.uk-form-icon
+                i.uk-icon-hand-o-right
+                input#c-partlen(name="c-partlen", type="number", min="4", max="10", value="#{length}")
+              label.uk-form-label.uk-margin-left(for="c-partlen") длина каждой части (4-10)
+            div.uk-form-row
+              div.uk-form-select.uk-button(data-uk-form-select)
+                span
+                i.uk-icon-caret-down.uk-margin-small-left
+                select#act(name="act")
+                  option(value="1" selected = act == 1) одноразовый купон
+                  option(value="0" selected = act == 0) многоразовый купон
+            div.uk-form-row
+              div.uk-form-select.uk-button(data-uk-form-select)
+                span
+                i.uk-icon-caret-down.uk-margin-small-left
+                select#typediscount(name="typediscount")
+                  option(value="1" selected = type == 1) тип скидки: процент
+                  option(value="2" selected = type == 2) тип скидки: денежная величина
+              div.uk-form-icon.uk-margin-small-left#b-discount
+                if type == 1
+                  i.uk-icon-percent
+                else
+                  i.uk-icon-rub
+                input.b-discount#discount(name="discount", type="text", value="#{discount}")
+            div.uk-form-row
+              div.uk-form-icon
+                i.uk-icon-calendar
+                input#until(name="until", type="text", value="#{expired}", data-uk-datepicker="{format:'DD.MM.YYYY'}")
+              label.uk-form-label.uk-margin-left(for="until") срок действия купонов
+            div.uk-form-row
+              div.uk-form-icon
+                i.uk-icon-copy
+                input#group(name="group", type="text", placeholder="Только буквы и цифры")
+              label.uk-form-label.uk-margin-left(for="group") Название группы купонов(можно не заполнять)
+            div.uk-form-row
+              div.uk-form-select.uk-button(data-uk-form-select)
+                span
+                i.uk-icon-caret-down.uk-margin-small-left
+                select#variants(name="variants")
+                  option(value="1" selected = variants == 1) создать новые, удалив все текущие
+                  option(value="2" selected = variants == 2) создать новые, добавив к текущим
+                  option(value="3" selected = variants == 3) создать новые, удалив только использованные
+                  option(value="4" selected = variants == 4) создать новые, удалив только не использованные
+              i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="<ol><li>Будут удалены абсолютно все существующие купоны и созданы новые.</li><li>К существующим купонам будут добавлены новые. Возможные дубли будут игнорироваться.</li><li>Будут удалены использованные купоны из существующих. К оставшимся будут добавлены новые.</li><li>Будут удалены не использованные купоны из существующих. К оставшимся будут добавлены новые.</li></ol>")
+        button.uk-button.uk-margin-small-top сгенерировать
+        div.coupon-sample.uk-margin-top Пример купона:
           span#coupon-sample
-    form.uk-form.uk-margin-top
-      fieldset(data-uk-margin)
-        legend Удалить купоны
-        div.uk-form-row
-          div.uk-form-select.uk-button(data-uk-form-select)
-            span
-            i.uk-icon-caret-down.uk-margin-small-left
-            select
-              option создать новые, удалив все текущие
-              option создать новые, добавив к текущим
-              option создать новые, удалив только использованные
-              option создать новые, удалив только не использованные
-          i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
-        button.uk-button удалить
+    div#modal-delete.uk-modal
+      div.uk-modal-dialog
+        a.uk-modal-close.uk-close
+        form.uk-form.uk-margin-top
+          fieldset(data-uk-margin)
+            legend Удалить купоны
+            div.uk-form-row
+              div.uk-form-select.uk-button(data-uk-form-select)
+                span
+                i.uk-icon-caret-down.uk-margin-small-left
+                select
+                  option создать новые, удалив все текущие
+                  option создать новые, добавив к текущим
+                  option создать новые, удалив только использованные
+                  option создать новые, удалив только не использованные
+              i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
+            button.uk-button удалить
