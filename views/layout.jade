@@ -21,3 +21,17 @@ html.uk-height-1-1
     script(src='/js/ui.js')
   body.uk-height-1-1
     block content
+    script(type="text/javascript", src="//assets.zendesk.com/external/zenbox/v2.6/zenbox.js")
+    style(type="text/css", media="screen, projection")
+      @import url(//assets.zendesk.com/external/zenbox/v2.6/zenbox.css);
+    script(type="text/javascript")
+     | if (typeof(Zenbox) !== "undefined") {
+     |   Zenbox.init({
+     |     dropboxID:   "20299322",
+     |     url:         "https://salesapps.zendesk.com",
+     |     tabTooltip:  "Поддержка",
+     |     tabImageURL: "https://p3.zdassets.com/external/zenbox/images/tab_ru_support.png",
+     |     tabColor:    "black",
+     |     tabPosition: "Left"
+     |   });
+     | }
