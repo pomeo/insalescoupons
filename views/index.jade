@@ -80,9 +80,9 @@ block content
                   option(value="3" selected = variants == 3) создать новые, удалив только использованные
                   option(value="4" selected = variants == 4) создать новые, удалив только не использованные
               i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="<ol><li>Будут удалены абсолютно все существующие купоны и созданы новые.</li><li>К существующим купонам будут добавлены новые. Возможные дубли будут игнорироваться.</li><li>Будут удалены использованные купоны из существующих. К оставшимся будут добавлены новые.</li><li>Будут удалены не использованные купоны из существующих. К оставшимся будут добавлены новые.</li></ol>")
-        button.uk-button.uk-margin-small-top сгенерировать
-        div.coupon-sample.uk-margin-top Пример купона:
-          span#coupon-sample
+          button.uk-button сгенерировать
+          div.coupon-sample.uk-margin-top Пример купона:
+            span#coupon-sample
     div#modal-delete.uk-modal
       div.uk-modal-dialog
         a.uk-modal-close.uk-close
