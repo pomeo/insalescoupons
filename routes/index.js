@@ -118,6 +118,22 @@ router.get('/', function(req, res) {
   }
 });
 
+router.get('/import-export', function(req, res) {
+  if (req.session.insalesid) {
+    Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
+      if (app.enabled == true) {
+        res.render('io', {
+          title    : ''
+        });
+      } else {
+        res.send('Приложение не установлено для данного магазина', 403);
+      }
+    })
+  } else {
+    res.send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти', 403);
+  }
+});
+
 router.post('/generate', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({
