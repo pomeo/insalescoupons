@@ -758,12 +758,21 @@ var Collections = mongoose.model('Collections', CollectionsSchema);
 var TasksSchema = new Schema();
 
 TasksSchema.add({
-  insalesid   : { type: Number, index: true }, // id магазина
-  type        : { type: Number, index: true }, // тип задания
-  status      : Number, // статус задания
-  groupid     : String, // id группы в цепочке заданий
-  created_at  : Date, // дата создания
-  updated_at  : Date // дата изменения
+  insalesid    : { type: Number, index: true }, // id магазина
+  type         : { type: Number, index: true }, // тип задания
+  status       : Number, // статус задания
+  groupid      : { type: String, index: true }, // id группы в цепочке заданий
+  numbers      : Number, // количество купонов
+  parts        : Number, // количество частей купона
+  length       : Number, // длина части купона
+  act          : Number, // одно или много-разовый купон
+  variant      : Number, // варианты развития задания
+  typediscount : Number, // процент или денежная единица
+  discount     : Number, // величина скидки
+  until        : Date,   // срок действия купона
+  group        : String, // название группы купона
+  created_at   : Date,   // дата создания
+  updated_at   : Date    // дата изменения
 });
 
 var Tasks = mongoose.model('Tasks', TasksSchema);
