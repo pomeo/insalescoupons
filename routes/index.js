@@ -297,6 +297,33 @@ router.get('/sample', function(req, res) {
   }
 })
 
+setInterval(function() {
+  Tasks.aggregate([ {
+    $match: {
+      status: { $in : [1, 2] }
+    }
+  }, {
+      $group: {
+        _id: { insalesid: "$insalesid" },
+        id: { $first: "$_id" }
+      }
+    }, {
+      $sort : { _id : 1}
+    }
+  ], function (err, result) {
+       if (err) {
+         log(err);
+       } else {
+         //console.dir(result);
+         for (var i = 0; i < result.length; i++) {
+           Tasks.findById(result[i].id, function (err, task) {
+             //console.log(task);
+           })
+         }
+       }
+     });
+}, 5000 );
+
 function deleteCouponsFromApp(job) {
   Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
     if (err) {
