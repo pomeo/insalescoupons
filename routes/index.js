@@ -22,7 +22,7 @@ var express     = require('express'),
     _           = require('lodash'),
     array       = require('array'),
     winston     = require('winston'),
-    Loggly      = require('winston-loggly').Loggly
+    Logentries  = require('winston-logentries');
 
 if (process.env.NODE_ENV === 'development') {
   var logger = new (winston.Logger)({
@@ -33,11 +33,7 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   var logger = new (winston.Logger)({
     transports: [
-      new (Loggly)({
-        subdomain: process.env.loggly_subdomain,
-        inputToken: process.env.loggly_token,
-        tags: ['coupons']
-      })
+      new winston.transports.Logentries({token: process.env.logentries})
     ]
   });
 }
