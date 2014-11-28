@@ -96,7 +96,7 @@ gulp.task('karma', function (done) {
 gulp.task('browser-sync', function() {
   browserSync.init(null, {
     proxy: 'localhost:3000',
-    browser: ['firefox'],
+    open: false,
     port: 8080,
     notify: false
   });
