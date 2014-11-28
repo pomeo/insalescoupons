@@ -86,13 +86,6 @@ gulp.task('mocha', function() {
         }));
 });
 
-gulp.task('karma', function (done) {
-  karma.start({
-    configFile: __dirname + '/test/karma/karma.conf.js',
-    singleRun: false
-  }, done);
-});
-
 gulp.task('browser-sync', function() {
   browserSync.init(null, {
     proxy: 'localhost:3000',
