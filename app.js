@@ -32,7 +32,19 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(cookieParser());
-app.use(session({ store: new RedisStore({host:'redis.salesapps.ru', port:6379, pass:''}), secret: process.env.SECRET, cookie: { maxAge: 31536000000 } }))
+app.use(session({
+  store: new RedisStore({
+    host:process.env.redis,
+    port:6379,
+    pass:''
+  }),
+  secret: process.env.SECRET,
+  cookie: {
+    maxAge: 31536000000
+  },
+  resave: false,
+  saveUninitialized: true
+}))
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bugsnag.errorHandler);
 
