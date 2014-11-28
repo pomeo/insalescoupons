@@ -8,12 +8,11 @@ set :application, "coupons.salesapps.ru"
 require           "capistrano-offroad"
 offroad_modules   "defaults", "supervisord"
 set :repository,  "git@github.com:pomeo/insalescoupons.git"
-set :supervisord_start_group, "coupons"
-set :supervisord_stop_group, "coupons"
+set :supervisord_start_group, "app"
+set :supervisord_stop_group, "app"
 #========================
 #ROLES
 #========================
-set  :gateway,    "#{application}"    # main server
-role :app,        "ubuntu@10.3.10.40" # lxc container
+role :app,        "ubuntu@#{application}"
 
 after "deploy:create_symlink", "deploy:npm_install", "deploy:restart"
