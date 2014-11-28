@@ -184,7 +184,7 @@ router.post('/generate', function(req, res) {
              'coupon-type-discount': parseInt(req.param('typediscount')),
              'coupon-discount': parseFloat(req.param('discount')),
              'coupon-until': moment(req.param('until'), 'DD.MM.YYYY')
-                      .format('DD.MM.YYYY'),
+                             .format('DD.MM.YYYY'),
              'coupon-group': req.param('group')
            };
            var exist = {
