@@ -4,7 +4,7 @@ var express     = require('express'),
     Schema      = mongoose.Schema,
     kue         = require('kue'),
     jobs        = kue.createQueue({
-      prefix: 'coupons',
+      prefix: 'q',
       disableSearch: true,
       redis: {
         host: process.env.redis
