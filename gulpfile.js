@@ -9,7 +9,6 @@ var gulp = require('gulp'),
     mocha = require('gulp-mocha'),
     plumber = require('gulp-plumber'),
     nib = require('nib'),
-    karma = require('karma').server,
     watch = require('gulp-watch'),
     browserSync = require('browser-sync'),
     reload = browserSync.reload;
