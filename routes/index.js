@@ -48,7 +48,7 @@ router.get('/', function(req, res) {
         req.session.insalesid = a.insalesid;
         res.redirect('/');
       } else {
-        log('Ошибка автологина. Неправильный token при переходе из insales', 'warn')
+        log('Ошибка автологина. Неправильный token при переходе из insales', 'warn');
         res.send('Ошибка автологина', 403);
       }
     });
