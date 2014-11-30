@@ -118,7 +118,14 @@ router.get('/zadaniya', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        Tasks.find({insalesid: req.session.insalesid}, function(err, tasks) {
+        Tasks.find({
+          insalesid: req.session.insalesid
+        }, null, {
+          sort: {
+            created_at: 1
+          }
+        }, function(err, tasks) {
+          var tasksList = [];
           async.each(tasks, function(task, callback) {
             tasksList.push({
               'type'    : task.type,
