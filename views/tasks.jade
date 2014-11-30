@@ -52,6 +52,9 @@ block content
           a(href="/opisanie") Описание
   div.uk-container-center.b-main
     h2.uk-h2.uk-margin-small-top Список заданий
+    each val in processing
+      div.uk-alert.uk-alert-warning(data-uk-tooltip, title="выполняется")
+        +list(val)
     each val in tasks
       if val.status == 2
         div.uk-alert.uk-alert-warning(data-uk-tooltip, title="выполняется")
