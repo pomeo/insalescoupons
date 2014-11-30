@@ -120,11 +120,18 @@ router.get('/zadaniya', function(req, res) {
       if (app.enabled == true) {
         Tasks.find({insalesid: req.session.insalesid}, function(err, tasks) {
           async.each(tasks, function(task, callback) {
-            log(task.groupid);
+            tasksList.push({
+              'type'    : task.type,
+              'status'  : task.status,
+              'numbers' : task.numbers,
+              'variant' : task.variant
+            });
             callback();
           }, function(err) {
+               log(tasksList);
                res.render('tasks', {
-                 title    : ''
+                 title    : '',
+                 tasks    : tasksList
                });
              });
         })
