@@ -118,30 +118,60 @@ router.get('/zadaniya', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        Tasks.find({
-          insalesid: req.session.insalesid
-        }, null, {
-          sort: {
-            created_at: 1
-          }
-        }, function(err, tasks) {
+        var T = Tasks.find({insalesid: req.session.insalesid});
+        T.sort({created_at: -1});
+        T.limit(50);
+        T.exec(function(err, tasks) {
           var tasksList = [];
+          var tasksDone = [];
+          var tasksProcessing = [];
           async.each(tasks, function(task, callback) {
-            tasksList.push({
-              'type'    : task.type,
-              'status'  : task.status,
-              'numbers' : task.numbers,
-              'variant' : task.variant
-            });
-            callback();
+            if (task.status == 3) {
+              tasksDone.push({
+                'type'    : task.type,
+                'status'  : task.status,
+                'numbers' : task.numbers,
+                'variant' : task.variant,
+                'created' : moment(new Date(task.created_at))
+                            .format('DD/MM/YYYY HH:mm ZZ'),
+                'updated' : moment(new Date(task.updated_at))
+                            .format('DD/MM/YYYY HH:mm ZZ')
+              });
+              callback();
+            } else if (task.status == 2) {
+              tasksProcessing.push({
+                'type'    : task.type,
+                'status'  : task.status,
+                'numbers' : task.numbers,
+                'variant' : task.variant,
+                'created' : moment(new Date(task.created_at))
+                            .format('DD/MM/YYYY HH:mm ZZ'),
+                'updated' : moment(new Date(task.updated_at))
+                            .format('DD/MM/YYYY HH:mm ZZ')
+              });
+              callback();
+            } else {
+              tasksList.push({
+                'type'    : task.type,
+                'status'  : task.status,
+                'numbers' : task.numbers,
+                'variant' : task.variant,
+                'created' : moment(new Date(task.created_at))
+                            .format('DD/MM/YYYY HH:mm ZZ'),
+                'updated' : moment(new Date(task.updated_at))
+                            .format('DD/MM/YYYY HH:mm ZZ')
+              });
+              callback();
+            }
           }, function(err) {
-               log(tasksList);
                res.render('tasks', {
-                 title    : '',
-                 tasks    : tasksList
+                 title      : '',
+                 tasks      : tasksList,
+                 done       : tasksDone,
+                 processing : tasksProcessing
                });
              });
-        })
+        });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
