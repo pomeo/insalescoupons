@@ -14,4 +14,30 @@ block content
         li
           a(href="/opisanie") Описание
   div.uk-container-center.b-main
-    
+    h2.uk-h2.uk-margin-small-top Список заданий
+    each val in tasks
+      mixin list
+        ul.uk-list
+          li
+            strong Тип задания: 
+            if val.type == 1
+              Создание купонов
+            else if val.type == 2
+              Синхронизация купонов
+            else
+              Удаление купонов
+          li
+            strong Вариант: 
+            = val.variant
+          li
+            strong Количество купонов: 
+            = val.numbers
+      if val.status == 2
+        div.uk-alert.uk-alert-warning(data-uk-tooltip, title="выполняется")
+          mixin list
+      else if val.status == 3
+        div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
+          mixin list
+      else
+        div.uk-alert(data-uk-tooltip, title="в очереди")
+          mixin list
