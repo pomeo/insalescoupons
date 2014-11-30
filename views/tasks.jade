@@ -1,3 +1,40 @@
+mixin list(val)
+  ul.uk-list
+    li
+      strong Тип задания: 
+      if val.type == 1
+        создание купонов
+      else if val.type == 2
+        синхронизация купонов
+      else if val.type == 3
+        удаление купонов
+    if val.type == 1 || val.type == 3
+      li
+        strong Вариант: 
+        if val.variant == 1
+          создать новые, удалив все текущие
+        else if val.variant == 2
+          создать новые, добавив к текущим
+        else if val.variant == 3
+          создать новые, удалив только использованные
+        else if val.variant == 4
+          создать новые, удалив только не использованные
+    if val.type == 1
+      li
+        strong Количество купонов: 
+        = val.numbers
+    if val.status == 2 || val.status == 1
+      li
+        strong Дата создания: 
+        = val.created
+    else
+      li
+        strong Дата создания: 
+        = val.created
+      li
+        strong Дата выполнения: 
+        = val.updated
+
 extends layout
 
 block content
@@ -16,28 +53,15 @@ block content
   div.uk-container-center.b-main
     h2.uk-h2.uk-margin-small-top Список заданий
     each val in tasks
-      mixin list
-        ul.uk-list
-          li
-            strong Тип задания: 
-            if val.type == 1
-              Создание купонов
-            else if val.type == 2
-              Синхронизация купонов
-            else
-              Удаление купонов
-          li
-            strong Вариант: 
-            = val.variant
-          li
-            strong Количество купонов: 
-            = val.numbers
       if val.status == 2
         div.uk-alert.uk-alert-warning(data-uk-tooltip, title="выполняется")
-          mixin list
+          +list(val)
       else if val.status == 3
         div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
-          mixin list
-      else
+          +list(val)
+      else if val.status == 1
         div.uk-alert(data-uk-tooltip, title="в очереди")
-          mixin list
+          +list(val)
+    each val in done
+      div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
+        +list(val)
