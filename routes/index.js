@@ -343,18 +343,16 @@ setInterval(function() {
       status: { $in : [1, 2] }
     }
   }, {
-      $group: {
-        _id: { insalesid: "$insalesid" },
-        id: { $first: "$_id" }
-      }
-    }, {
-      $sort : { _id : 1}
+    $sort : { created_at: 1 }
+  }, {
+    $group: {
+      _id: { insalesid: "$insalesid" },
+      id: { $first: "$_id" }
     }
-  ], function (err, result) {
+  }], function (err, result) {
        if (err) {
          log(err);
        } else {
-         //console.dir(result);
          for (var i = 0; i < result.length; i++) {
            Tasks.findById(result[i].id, function (err, task) {
              //console.log(task);
