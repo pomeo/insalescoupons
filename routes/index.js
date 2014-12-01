@@ -349,7 +349,7 @@ setInterval(function() {
       _id: { insalesid: "$insalesid" },
       id: { $first: "$_id" }
     }
-  }], function (err, result) {
+  }], function(err, result) {
        if (err) {
          log(err);
        } else {
