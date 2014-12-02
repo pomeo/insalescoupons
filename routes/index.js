@@ -363,7 +363,30 @@ setInterval(function() {
        } else {
          for (var i = 0; i < result.length; i++) {
            Tasks.findById(result[i].id, function (err, task) {
-             //console.log(task);
+             if (task.status == 1) {
+               jobs.create('coupons', {
+                 id: task.insalesid,
+                 taskid: task._id,
+                 type: task.type,
+                 numbers: task.numbers,
+                 parts: task.parts,
+                 length: task.length,
+                 act: task.act,
+                 variant: task.variant,
+                 typediscount: task.typediscount,
+                 discount: task.typediscount,
+                 until: task.until,
+                 group: task.group
+               }).delay(600).priority('critical').save();
+               task.status = 2;
+               task.save(function (err) {
+                 if (err) {
+                   log(err);
+                 } else {
+                   log('Done');
+                 }
+               });
+             }
            })
          }
        }
