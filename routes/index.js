@@ -736,6 +736,10 @@ jobs.process('coupons', function(job, done) {
     // удаляем купоны из магазина
     deleteCoupons(job);
     done();
+  } else if (job.data.type === 5) {
+    // закрываем Task
+    closeTask(job.data.id);
+    done();
   }
 });
 
