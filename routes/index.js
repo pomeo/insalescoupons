@@ -287,9 +287,10 @@ router.post('/generate', function(req, res) {
                              });
                            }
                          }
-                         jobs.create('coupons', {
+                         var T = new Tasks({
                            id: req.session.insalesid,
                            type: 1,
+                           groupid: rack(),
                            numbers: form['coupon-number'],
                            parts: form['coupon-parts'],
                            length: form['coupon-part-lengths'],
@@ -299,9 +300,16 @@ router.post('/generate', function(req, res) {
                            discount: form['coupon-discount'],
                            until: form['coupon-until'],
                            group: form['coupon-group']
-                         }).delay(600).priority('critical').save();
-                         log('Done');
-                         res.json('success');
+                         });
+                         T.save(function (err) {
+                           if (err) {
+                             log('Ошибка');
+                             log(err);
+                           } else {
+                             log('Done');
+                             res.json('success');
+                           }
+                         });
                        }
                      });
                 });
