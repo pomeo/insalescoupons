@@ -669,6 +669,30 @@ function createCoupons(job) {
   });
 }
 
+function createJobCloseTask(taskid) {
+  log('вывод id таска1');
+  log(taskid);
+  jobs.create('coupons', {
+    id: taskid,
+    type: 5
+  }).delay(5000).priority('low').save();
+}
+
+function closeTask(taskid) {
+  log('вывод id таска2');
+  log(taskid);
+  Tasks.findById(taskid, function(err, task) {
+    task.status = 3;
+    task.save(function(err) {
+      if (err) {
+        log(err);
+      } else {
+        log('Done');
+      }
+    });
+  })
+}
+
 jobs.process('coupons', function(job, done) {
   if (job.data.type === 1) { // создание задания
     if (job.data.variant === 1) {
