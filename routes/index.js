@@ -675,21 +675,29 @@ jobs.process('coupons', function(job, done) {
       // удалить все купоны, создать новые
       deleteCouponsFromApp(job);
       createJobGetCoupons(job);
+      createJobDeleteCoupons(job, 1);
+      createJobCloseTask(job.data.taskid);
       done();
     } else if (job.data.variant === 2) {
       // создать новые, добавив к текущим
       deleteCouponsFromApp(job);
       createJobGetCoupons(job);
+      createJobCreateCoupons(job);
+      createJobCloseTask(job.data.taskid);
       done();
     } else if (job.data.variant === 3) {
       // удалить использованные, создать новые
       deleteCouponsFromApp(job);
       createJobGetCoupons(job);
+      createJobDeleteCoupons(job, 2);
+      createJobCloseTask(job.data.taskid);
       done();
     } else if (job.data.variant === 4) {
       // удалить неиспользованные, создать новые
       deleteCouponsFromApp(job);
       createJobGetCoupons(job);
+      createJobDeleteCoupons(job, 3);
+      createJobCloseTask(job.data.taskid);
       done();
     }
   } else if (job.data.type === 2) {
