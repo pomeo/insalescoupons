@@ -515,34 +515,38 @@ function getCouponsFromShop(job) {
   });
 }
 
-function createJobDeleteCoupons(job) {
-  Coupons.find({
-    insalesid:job.data.id
-  }, function(err, coupons) {
-       async.each(coupons, function(coup, callback) {
-         jobs.create('coupons', {
-           id: job.data.id,
-           couponid: coup.guid,
-           type: 4,
-           numbers: job.data.numbers,
-           parts: job.data.parts,
-           length: job.data.length,
-           act: job.data.act,
-           variant: job.data.variant,
-           typediscount: job.data.typediscount,
-           discount: job.data.discount,
-           until: job.data.until,
-           group: job.data.group
-         }).delay(600).priority('medium').save();
-         callback();
-       }, function(e) {
-            if (e) {
-              log('Ошибка');
-            } else {
-              createJobCreateCoupons(job);
-            }
-          });
-     });
+function createJobDeleteCoupons(job, opt) {
+  var C = Coupons.find({insalesid: job.data.id});
+  if (opt == 2) {
+    C.where({'worked': false});
+  } else if (opt == 3) {
+    C.where({'worked': true});
+  }
+  C.exec(function(err, coupons) {
+    async.each(coupons, function(coup, callback) {
+      jobs.create('coupons', {
+        id: job.data.id,
+        couponid: coup.guid,
+        type: 4,
+        numbers: job.data.numbers,
+        parts: job.data.parts,
+        length: job.data.length,
+        act: job.data.act,
+        variant: job.data.variant,
+        typediscount: job.data.typediscount,
+        discount: job.data.discount,
+        until: job.data.until,
+        group: job.data.group
+      }).delay(600).priority('medium').save();
+      callback();
+    }, function(e) {
+         if (e) {
+           log('Ошибка');
+         } else {
+           createJobCreateCoupons(job);
+         }
+       });
+  });
 }
 
 function deleteCoupons(job) {
