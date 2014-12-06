@@ -287,9 +287,11 @@ router.post('/generate', function(req, res) {
                              });
                            }
                          }
+                         log(req.session.insalesid);
                          var T = new Tasks({
-                           id: req.session.insalesid,
+                           insalesid: req.session.insalesid,
                            type: 1,
+                           status: 1,
                            groupid: rack(),
                            numbers: form['coupon-number'],
                            parts: form['coupon-parts'],
