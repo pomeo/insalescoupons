@@ -731,6 +731,22 @@ jobs.process('coupons', function(job, done) {
   }
 });
 
+jobs.process('deleteApp', function(job, done) {
+
+});
+
+jobs.process('deleteInsales', function(job, done) {
+
+});
+
+jobs.process('get', function(job, done) {
+
+});
+
+jobs.process('create', function(job, done) {
+
+});
+
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') &&
       (req.query.token !== '') &&
