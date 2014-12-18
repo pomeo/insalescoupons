@@ -400,23 +400,16 @@ setInterval(function() {
      });
 }, 5000 );
 
+// 1 удалить все купоны, создать новые
+// 2 создать новые, добавив к текущим
+// 3 удалить использованные, создать новые
+// 4 удалить неиспользованные, создать новые
 var Queue = {
-  deleteCouponsFromApp: function(job) {
-    Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
-      if (err) {
-        log('Ошибка');
-      } else {
-        log('Удалены купоны из базы приложения');
-      }
-    });
-  },
-
-  createJobGetCoupons: function(job, opt) {
-    jobs.create('coupons', {
+  createJobDeleteCouponsFromApp: function(job) {
+    jobs.create('deleteApp', {
       id: job.data.id,
-      page: 1,
-      opt: opt,
-      type: 3,
+      taskid: job.data.taskid,
+      type: job.data.type,
       numbers: job.data.numbers,
       parts: job.data.parts,
       length: job.data.length,
@@ -426,10 +419,45 @@ var Queue = {
       discount: job.data.discount,
       until: job.data.until,
       group: job.data.group
-    }).delay(1).priority('critical').save();
+    }).priority('normal').save();
   },
 
-  getCouponsFromShop: function(job) {
+  deleteCouponsFromApp: function(job, done) {
+    Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
+      if (err) {
+        log('Ошибка', 'error');
+        log(err);
+        Queue.createJobDeleteCouponsFromApp(job);
+        done();
+      } else {
+        log('Удалены купоны из базы приложения');
+        Queue.createJobGetCoupons(job);
+        done();
+      }
+    });
+  },
+
+  createJobGetCoupons: function(job) {
+    var p = (job.data.page === undefined) ? 1 : job.data.page;
+    log('Задание на получение купонов');
+    jobs.create('get', {
+      id: job.data.id,
+      taskid: job.data.taskid,
+      page: p,
+      type: job.data.type,
+      numbers: job.data.numbers,
+      parts: job.data.parts,
+      length: job.data.length,
+      act: job.data.act,
+      variant: job.data.variant,
+      typediscount: job.data.typediscount,
+      discount: job.data.discount,
+      until: job.data.until,
+      group: job.data.group
+    }).delay(600).priority('normal').save();
+  },
+
+  getCouponsFromShop: function(job, done) {
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
         rest.get('http://' + process.env.insalesid
@@ -450,12 +478,22 @@ var Queue = {
           } else {
             if (o.errors) {
               log('Ошибка');
+              done();
             } else {
+              log('Заходим в функцию дёрганья купонов');
               if (typeof o['discount-codes'] === 'undefined') {
-                if (job.data.opt == 1) {
-
+                if ((job.data.variant === 1) ||
+                    (job.data.variant === 3) ||
+                    (job.data.variant === 4)) {
+                  Queue.createJobDeleteCoupons(job);
+                  done();
+                } else if (job.data.variant === 2) {
+                  Queue.createJobCreateCoupons(job);
+                  done();
                 } else {
-
+                  log('Конец');
+                  Queue.createJobCloseTask(job.data.taskid);
+                  done();
                 }
               } else {
                 var coupon = new Coupons();
@@ -483,30 +521,20 @@ var Queue = {
                       log(err);
                       callback();
                     } else {
-                      //log('Сохранён купон из магазина в базу приложения');
+                      log('Сохранён купон из магазина в базу приложения');
                       callback();
                     }
                   });
                 }, function(e) {
                      if (e) {
                        log('A coupons failed to process');
+                       Queue.createJobGetCoupons(job);
+                       done();
                      } else {
                        log('All coupons have been processed successfully ' + job.data.page);
                        job.data.page++;
-                       jobs.create('coupons', {
-                         id: job.data.id,
-                         page: job.data.page,
-                         type: 3,
-                         numbers: job.data.numbers,
-                         parts: job.data.parts,
-                         length: job.data.length,
-                         act: job.data.act,
-                         variant: job.data.variant,
-                         typediscount: job.data.typediscount,
-                         discount: job.data.discount,
-                         until: job.data.until,
-                         group: job.data.group
-                       }).delay(600).priority('high').save();
+                       Queue.createJobGetCoupons(job);
+                       done();
                      }
                    });
               }
@@ -515,21 +543,23 @@ var Queue = {
         });
       } else {
         log('Приложение не установлено для данного магазина');
+        done();
       }
     });
   },
 
-  createJobDeleteCoupons: function(job, opt) {
+  createJobDeleteCoupons: function(job) {
     var C = Coupons.find({insalesid: job.data.id});
-    if (opt == 2) {
+    if (job.data.variant == 4) {
       C.where({'worked': false});
-    } else if (opt == 3) {
+    } else if (job.data.variant == 3) {
       C.where({'worked': true});
     }
     C.exec(function(err, coupons) {
       async.each(coupons, function(coup, callback) {
-        jobs.create('coupons', {
+        jobs.create('deleteInsales', {
           id: job.data.id,
+          taskid: job.data.taskid,
           couponid: coup.guid,
           type: 4,
           numbers: job.data.numbers,
@@ -541,19 +571,33 @@ var Queue = {
           discount: job.data.discount,
           until: job.data.until,
           group: job.data.group
-        }).delay(600).priority('medium').save();
+        }).delay(600).priority('normal').save();
         callback();
       }, function(e) {
            if (e) {
              log('Ошибка');
            } else {
              log('Задание на удаление создано');
+             jobs.create('deleteInsales', {
+               id: job.data.id,
+               taskid: job.data.taskid,
+               type: 4,
+               numbers: job.data.numbers,
+               parts: job.data.parts,
+               length: job.data.length,
+               act: job.data.act,
+               variant: job.data.variant,
+               typediscount: job.data.typediscount,
+               discount: job.data.discount,
+               until: job.data.until,
+               group: job.data.group
+             }).delay(600).priority('normal').save();
            }
          });
     });
   },
 
-  deleteCoupons: function(job) {
+  deleteCoupons: function(job, done) {
     log('Включилась функция удаления купонов');
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
@@ -573,8 +617,10 @@ var Queue = {
               }, function (err, r){
                    if (err) {
                      log('Ошибка');
+                     done();
                    } else {
                      log('Удалён купон из магазина и базы приложения');
+                     done();
                    }
                  });
             }
@@ -584,8 +630,10 @@ var Queue = {
             }, function (err, r){
                  if (err) {
                    log('Ошибка');
+                   done();
                  } else {
                    log('Удалён купон из магазина и базы приложения');
+                   done();
                  }
                });
           }
@@ -598,20 +646,32 @@ var Queue = {
   },
 
   createJobCreateCoupons: function(job) {
-    for (var i = 0; i < job.data.numbers; i++) {
-      jobs.create('coupons', {
-        id: job.data.id,
-        type: 2,
-        coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
-        act: job.data.act,
-        discount: job.data.discount,
-        typediscount: job.data.typediscount,
-        until: job.data.until
-      }).delay(1).priority('normal').save();
-    }
+    var count = 0;
+    async.whilst(
+      function() { return count < job.data.numbers; },
+      function(callback) {
+        count++;
+        jobs.create('create', {
+          id: job.data.id,
+          taskid: job.data.taskid,
+          type: 2,
+          coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
+          act: job.data.act,
+          discount: job.data.discount,
+          typediscount: job.data.typediscount,
+          until: job.data.until
+        }).delay(600).priority('normal').save();
+        callback();
+      },
+      function(err) {
+        jobs.create('create', {
+          taskid: job.data.taskid
+        }).delay(600).priority('normal').save();
+      }
+    );
   },
 
-  createCoupons: function(job) {
+  createCoupons: function(job, done) {
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
         var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
@@ -639,6 +699,7 @@ var Queue = {
             if (o.errors) {
               log('Ошибка');
               log(o);
+              done();
             } else {
               log(o);
               var coupon = new Coupons({
@@ -664,6 +725,7 @@ var Queue = {
                   log(err);
                 } else {
                   log('Создан купон');
+                  done();
                 }
               });
             }
@@ -676,78 +738,64 @@ var Queue = {
   },
 
   createJobCloseTask: function(taskid) {
-    log('вывод id таска1');
+    log('Создаём задание на зыкрытие');
     log(taskid);
-    jobs.create('coupons', {
-      id: taskid,
-      type: 5
-    }).delay(5000).priority('low').save();
+    jobs.create('close', {
+      taskid: taskid
+    }).priority('normal').save();
   },
 
-  closeTask: function(taskid) {
-    log('вывод id таска2');
-    log(taskid);
+  closeTask: function(taskid, done) {
+    log('Закрываем таск');
     Tasks.findById(taskid, function(err, task) {
       task.status = 3;
       task.save(function(err) {
         if (err) {
           log(err);
-          // jobs.create('coupons', {
-          //   id: taskid,
-          //   type: 5
-          // }).delay(5000).priority('low').save();
+          Queue.createJobCloseTask(taskid);
+          done();
         } else {
           log('Done');
+          done();
         }
       });
     })
   }
 }
 
-jobs.process('coupons', function(job, done) {
-  if (job.data.type === 1) { // создание задания
-    if (job.data.variant === 1) {
-      // удалить все купоны, создать новые
-      done();
-    } else if (job.data.variant === 2) {
-      // создать новые, добавив к текущим
-      done();
-    } else if (job.data.variant === 3) {
-      // удалить использованные, создать новые
-      done();
-    } else if (job.data.variant === 4) {
-      // удалить неиспользованные, создать новые
-      done();
-    }
-  } else if (job.data.type === 2) {
-    // создаём купоны
-    done();
-  } else if (job.data.type === 3) {
-    // достаём купоны из магазина
-    done();
-  } else if (job.data.type === 4) {
-    // удаляем купоны из магазина
-    done();
-  } else if (job.data.type === 5) {
-    // закрываем Task
-    done();
-  }
-});
-
 jobs.process('deleteApp', function(job, done) {
-
+  // удаляем купоны из базы приложения
+  Queue.deleteCouponsFromApp(job, done);
 });
 
 jobs.process('deleteInsales', function(job, done) {
-
+  // удаляем купоны из магазина
+  if (job.data.couponid === undefined) {
+    Queue.createJobCreateCoupons(job);
+    done();
+  } else {
+    Queue.deleteCoupons(job, done);
+  }
 });
 
 jobs.process('get', function(job, done) {
-
+  // достаём купоны из магазина
+  Queue.getCouponsFromShop(job, done);
 });
 
 jobs.process('create', function(job, done) {
+  // создаём купоны
+  if (job.data.id === undefined) {
+    Queue.createJobCloseTask(job.data.taskid);
+    done();
+  } else {
+    Queue.createCoupons(job, done);
+  }
+});
 
+jobs.process('close', function(job, done) {
+  // создаём купоны
+  Queue.closeTask(job.data.taskid, done);
 });
 
 router.get('/install', function(req, res) {
