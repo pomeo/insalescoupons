@@ -349,6 +349,31 @@ router.get('/sample', function(req, res) {
   }
 })
 
+router.get('/data', function(req, res) {
+  if (req.session.insalesid) {
+    Apps.findOne({insalesid:req.session.insalesid}, function(err, app) {
+      if (app.enabled == true) {
+        var data = [];
+        for (var i = 0; i < 500; i++) {
+          data[i] = {
+            title: "Task " + i,
+            duration: "5 days",
+            percentComplete: Math.round(Math.random() * 100),
+            start: "01/01/2009",
+            finish: "01/05/2009",
+            effortDriven: (i % 5 == 0)
+          };
+        }
+        res.json(data);
+      } else {
+        res.status(403).send('Приложение не установлено для данного магазина');
+      }
+    });
+  } else {
+    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+  }
+})
+
 setInterval(function() {
   Tasks.aggregate([ {
     $match: {
