@@ -70,30 +70,59 @@ $(document).ready(function() {
     }
   });
   var grid;
+  //var loader = new Slick.Data.RemoteModel();
   var columns = [
-    {id: "title", name: "Title", field: "title"},
-    {id: "duration", name: "Duration", field: "duration"},
-    {id: "%", name: "% Complete", field: "percentComplete"},
-    {id: "start", name: "Start", field: "start"},
-    {id: "finish", name: "Finish", field: "finish"},
-    {id: "effort-driven", name: "Effort Driven", field: "effortDriven"}
+    {id: "title", name: "Title", field: "title", sortable: true},
+    {id: "duration", name: "Duration", field: "duration", sortable: true},
+    {id: "%", name: "% Complete", field: "percentComplete", sortable: true},
+    {id: "start", name: "Start", field: "start", sortable: true},
+    {id: "finish", name: "Finish", field: "finish", sortable: true},
+    {id: "effort-driven", name: "Effort Driven", field: "effortDriven", sortable: true}
   ];
   var options = {
     enableCellNavigation: true,
-    enableColumnReorder: false
+    enableColumnReorder: false,
+    multiColumnSort: true
   };
-  $(function () {
-    var data = [];
-    for (var i = 0; i < 500; i++) {
-      data[i] = {
-        title: "Task " + i,
-        duration: "5 days",
-        percentComplete: Math.round(Math.random() * 100),
-        start: "01/01/2009",
-        finish: "01/05/2009",
-        effortDriven: (i % 5 == 0)
-      };
+
+  var loadingIndicator = null;
+
+  $.ajax({
+    url: '/data',
+    dataType: "json",
+    error: function (jqXHR, textStatus, errorThrown) {
+      alert("hi this is error message");
+      console.log(jqXHR);
+    },
+    success: function (data) {
+      for (var i = 0; i < data.length; i++) {
+        data[i] = {
+          title: data[i].title,
+          duration: data[i].duration,
+          percentComplete: data[i].percentComplete,
+          start: data[i].start,
+          finish: data[i].finish,
+          effortDriven: data[i].effortDriven
+        }
+      }
+      grid = new Slick.Grid("#coupons", data, columns, options);
+      grid.onSort.subscribe(function (e, args) {
+        var cols = args.sortCols;
+        data.sort(function (dataRow1, dataRow2) {
+          for (var i = 0, l = cols.length; i < l; i++) {
+            var field = cols[i].sortCol.field;
+            var sign = cols[i].sortAsc ? 1 : -1;
+            var value1 = dataRow1[field], value2 = dataRow2[field];
+            var result = (value1 == value2 ? 0 : (value1 > value2 ? 1 : -1)) * sign;
+            if (result != 0) {
+              return result;
+            }
+          }
+          return 0;
+        });
+        grid.invalidate();
+        grid.render();
+      });
     }
-    grid = new Slick.Grid("#coupons", data, columns, options);
-  })
+  });
 });
