@@ -198,6 +198,35 @@ router.get('/import-export', function(req, res) {
   }
 });
 
+router.post('/import', function(req, res) {
+  if (req.session.insalesid) {
+
+  } else {
+    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+  }
+});
+
+router.get('/export', function(req, res) {
+  if (req.session.insalesid) {
+    Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
+      if (app.enabled == true) {
+        var wb = new xl.WorkBook();
+        var ws = wb.WorkSheet('New Worksheet');
+        ws.Cell(1,1).String('My String');
+        ws.Cell(2,1).Number(5);
+        ws.Cell(2,2).Number(10);
+        ws.Cell(2,3).Formula("A2+B2");
+        ws.Cell(2,4).Formula("A2/C2");
+        wb.write("My Excel File.xlsx", res);
+      } else {
+        res.status(403).send('Приложение не установлено для данного магазина');
+      }
+    })
+  } else {
+    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+  }
+});
+
 router.get('/opisanie', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
