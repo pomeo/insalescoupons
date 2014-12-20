@@ -21,6 +21,7 @@ var express     = require('express'),
     cc          = require('coupon-code'),
     _           = require('lodash'),
     array       = require('array'),
+    xl          = require('excel4node'),
     winston     = require('winston'),
     Logentries  = require('winston-logentries');
 
