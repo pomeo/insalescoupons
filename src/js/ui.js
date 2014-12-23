@@ -49,6 +49,18 @@ $(document).ready(function() {
       return false;
     }
   })
+  $("#coupons-delete").submit(function() {
+    $(this).ajaxSubmit({
+      success: function (response) {
+        if (response == 'success') {
+          $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+        } else {
+          $.UIkit.notify("ошибка", {status:'danger'});
+        }
+      }
+    });
+    return false;
+  });
   $("input[name='c-part'], input[name='c-partlen']").change(sample);
   function sample() {
     var n = $("input[name='c-num']").val();
