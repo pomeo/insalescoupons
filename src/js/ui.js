@@ -117,7 +117,6 @@ $(document).ready(function() {
     url: '/data',
     dataType: "json",
     error: function (jqXHR, textStatus, errorThrown) {
-      alert("hi this is error message");
       console.log(jqXHR);
     },
     success: function (data) {
