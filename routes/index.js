@@ -562,22 +562,58 @@ setInterval(function() {
          for (var i = 0; i < result.length; i++) {
            Tasks.findById(result[i].id, function (err, task) {
              if (task.status == 1) {
-               var j = {
-                 data: {
-                   id: task.insalesid,
-                   taskid: task._id,
-                   type: task.type,
-                   numbers: task.numbers,
-                   parts: task.parts,
-                   length: task.length,
-                   act: task.act,
-                   variant: task.variant,
-                   typediscount: task.typediscount,
-                   discount: task.typediscount,
-                   until: task.until,
-                   group: task.group
-                 }
-               };
+               if (task.type == 5) {
+                 var j = {
+                   data: {
+                     id: task.insalesid,
+                     taskid: task._id,
+                     type: task.type,
+                     numbers: null,
+                     parts: null,
+                     length: null,
+                     act: null,
+                     variant: null,
+                     typediscount: null,
+                     discount: null,
+                     until: null,
+                     group: null
+                   }
+                 };
+               } else if (task.type == 6) {
+                 var j = {
+                   data: {
+                     id: task.insalesid,
+                     taskid: task._id,
+                     type: task.type,
+                     numbers: null,
+                     parts: null,
+                     length: null,
+                     act: null,
+                     variant: task.variant,
+                     typediscount: null,
+                     discount: null,
+                     until: null,
+                     group: null
+                   }
+                 };
+               } else {
+                 var j = {
+                   data: {
+                     id: task.insalesid,
+                     taskid: task._id,
+                     type: task.type,
+                     numbers: task.numbers,
+                     parts: task.parts,
+                     length: task.length,
+                     act: task.act,
+                     variant: task.variant,
+                     typediscount: task.typediscount,
+                     discount: task.discount,
+                     until: task.until,
+                     group: task.group
+                   }
+                 };
+               }
                Queue.createJobDeleteCouponsFromApp(j);
                task.status = 2;
                task.save(function (err) {
