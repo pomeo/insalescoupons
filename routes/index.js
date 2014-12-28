@@ -811,10 +811,11 @@ var Queue = {
 
   createJobDeleteCoupons: function(job) {
     var C = Coupons.find({insalesid: job.data.id});
-    if (job.data.variant == 4) {
-      C.where({'worked': false});
-    } else if (job.data.variant == 3) {
-      C.where({'worked': true});
+    if (job.data.variant == 3) {
+      log('заходим');
+      C.and([{'worked': false}, {'disabled': false}]);
+    } else if (job.data.variant == 4) {
+      C.and([{'worked': true}, {'disabled': false}]);
     }
     C.exec(function(err, coupons) {
       async.each(coupons, function(coup, callback) {
