@@ -264,18 +264,99 @@ router.post('/import', function(req, res) {
   }
 });
 
+function isEven(n) {
+  return n === parseFloat(n)? !(n%2) : void 0;
+}
+
 router.get('/export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
         var wb = new xl.WorkBook();
-        var ws = wb.WorkSheet('New Worksheet');
-        ws.Cell(1,1).String('My String');
-        ws.Cell(2,1).Number(5);
-        ws.Cell(2,2).Number(10);
-        ws.Cell(2,3).Formula("A2+B2");
-        ws.Cell(2,4).Formula("A2/C2");
-        wb.write("My Excel File.xlsx", res);
+        var ws = wb.WorkSheet('xxxxxxxzzzzzzzz');
+        var headerStyle = wb.Style();
+        headerStyle.Font.Family('Arial');
+        headerStyle.Font.Size(12);
+        headerStyle.Font.WrapText(true);
+        headerStyle.Font.Alignment.Vertical('center');
+        headerStyle.Font.Alignment.Horizontal('center');
+        headerStyle.Border({
+          top:{
+            style:'thick'
+          },
+          bottom:{
+            style:'thick'
+          },
+          left:{
+            style:'thick'
+          },
+          right:{
+            style:'thick'
+          }
+        });
+        var rowOddStyle = wb.Style();
+        rowOddStyle.Font.Family('Arial');
+        rowOddStyle.Font.Size(12);
+        rowOddStyle.Font.WrapText(true);
+        rowOddStyle.Fill.Pattern('solid');
+        rowOddStyle.Fill.Color('E9E7E3');
+        rowOddStyle.Font.Alignment.Vertical('center');
+        rowOddStyle.Border({
+          bottom:{
+            style:'thin',
+            color:'A0A0A4'
+          }
+        });
+        var rowEvenStyle = wb.Style();
+        rowEvenStyle.Font.Family('Arial');
+        rowEvenStyle.Font.Size(12);
+        rowEvenStyle.Font.WrapText(true);
+        rowEvenStyle.Fill.Pattern('solid');
+        rowEvenStyle.Fill.Color('FFFFFF');
+        rowEvenStyle.Font.Alignment.Vertical('center');
+        rowEvenStyle.Border({
+          bottom:{
+            style:'thin',
+            color:'A0A0A4'
+          }
+        });
+        ws.Row(1).Height(30);
+        ws.Column(1).Width(30);
+        ws.Column(2).Width(30);
+        ws.Column(3).Width(30);
+        ws.Column(4).Width(30);
+        ws.Column(5).Width(30);
+        ws.Column(6).Width(30);
+        ws.Cell(1,1).String('Код купона').Style(headerStyle);
+        ws.Cell(1,2).String('Описание').Style(headerStyle);
+        ws.Cell(1,3).String('Описание').Style(headerStyle);
+        ws.Cell(1,4).String('Описание').Style(headerStyle);
+        ws.Cell(1,5).String('Описание').Style(headerStyle);
+        ws.Cell(1,6).String('Описание').Style(headerStyle);
+        Coupons.find({
+          insalesid: req.session.insalesid
+        }, function(err, coupons) {
+             var i = 2;
+             async.eachSeries(coupons, function(coup, callback) {
+               ws.Row(i).Height(20);
+               ws.Cell(i,1)
+               .String(coup.code)
+               .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+               ws.Cell(i,2)
+               .String(coup.description)
+               .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+               i++;
+               callback();
+             }, function(e) {
+                  if (e) {
+                    log('Ошибка');
+                    res.sendStatus(200)
+                  } else {
+                    //res.sendStatus(200)
+                    wb.write('coupons.xlsx', res);
+                  }
+                });
+           });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
