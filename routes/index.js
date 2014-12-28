@@ -1225,7 +1225,7 @@ var CouponsSchema = new Schema();
 CouponsSchema.add({
   insalesid           : { type: Number, index: true }, // id магазина
   guid                : { type: Number, index: true }, // id купона
-  сode                : String, // код купона
+  code                : { type: String, index: true }, // код купона
   description         : String, // описание купона
   act                 : Boolean, // одноразовый или многоразовый купон
   actclient           : Boolean, // одноразовый для зарегистрированного покупателя
