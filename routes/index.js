@@ -395,7 +395,7 @@ router.post('/generate', function(req, res) {
              'coupon-act': parseInt(req.param('act')),
              'coupon-variants': parseInt(req.param('variants')),
              'coupon-type-discount': parseInt(req.param('typediscount')),
-             'coupon-discount': parseFloat(req.param('discount')),
+             'coupon-discount': parseFloat(req.param('discount').replace(",",".")).toFixed(2),
              'coupon-until': moment(req.param('until'), 'DD.MM.YYYY')
                              .format('DD.MM.YYYY'),
              'coupon-group': req.param('group')
