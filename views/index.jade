@@ -86,17 +86,19 @@ block content
     div#modal-delete.uk-modal
       div.uk-modal-dialog
         a.uk-modal-close.uk-close
-        form.uk-form.uk-margin-top
+        form.uk-form.uk-margin-top#coupons-delete(method="post", action="/input")
           fieldset(data-uk-margin)
             legend Удалить купоны
             div.uk-form-row
               div.uk-form-select.uk-button(data-uk-form-select)
                 span
                 i.uk-icon-caret-down.uk-margin-small-left
-                select
-                  option создать новые, удалив все текущие
-                  option создать новые, добавив к текущим
-                  option создать новые, удалив только использованные
-                  option создать новые, удалив только не использованные
-              i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="test<br />test2")
+                select(name="variants")
+                  option(value="1" selected)
+                   | удалить все текущие
+                  option(value="3")
+                   | удалить только использованные
+                  option(value="4")
+                   | удалить только не использованные
+              i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="<ol><li>Будут удалены абсолютно все существующие купоны.</li><li>Будут удалены использованные купоны из существующих.</li><li>Будут удалены не использованные купоны из существующих.</li></ol>")
             button.uk-button удалить
