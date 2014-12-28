@@ -183,6 +183,63 @@ router.get('/zadaniya', function(req, res) {
   }
 });
 
+router.post('/input', function(req, res) {
+  if (req.session.insalesid) {
+    Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
+      if (app.enabled == true) {
+        if (req.param('data') == 1) {
+          // синхронизация
+          var T = new Tasks({
+            insalesid: req.session.insalesid,
+            type: 5,
+            status: 1,
+            groupid: rack(),
+            created_at : new Date(),
+            updated_at : new Date()
+          });
+          T.save(function (err) {
+            if (err) {
+              log('Ошибка');
+              log(err);
+              res.status(403).send('ошибка');
+            } else {
+              log('Done');
+              res.status(200).send('success');
+            }
+          });
+        } else if (req.param('variants')) {
+          // удаление
+          var T = new Tasks({
+            insalesid: req.session.insalesid,
+            type: 6,
+            status: 1,
+            groupid: rack(),
+            variant: parseInt(req.param('variants')),
+            created_at : new Date(),
+            updated_at : new Date()
+          });
+          T.save(function (err) {
+            if (err) {
+              log('Ошибка');
+              log(err);
+              res.status(403).send('ошибка');
+            } else {
+              log('Done');
+              res.status(200).send('success');
+            }
+          });
+        } else {
+          res.status(403).send('Ошибка');
+        }
+      } else {
+        res.status(403).send('Приложение не установлено для данного магазина');
+      }
+    })
+  } else {
+    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+  }
+});
+
 router.get('/import-export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
