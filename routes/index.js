@@ -967,7 +967,7 @@ var Queue = {
               var coupon = new Coupons({
                 insalesid           : job.data.id,
                 guid                : o['discount-code']['id'],
-                сode                : o['discount-code']['code'],
+                code                : o['discount-code']['code'],
                 description         : o['discount-code']['description'],
                 act                 : o['discount-code']['act-once'],
                 actclient           : o['discount-code']['act-once-for-client'],
