@@ -823,7 +823,7 @@ var Queue = {
           id: job.data.id,
           taskid: job.data.taskid,
           couponid: coup.guid,
-          type: 4,
+          type: job.data.type,
           numbers: job.data.numbers,
           parts: job.data.parts,
           length: job.data.length,
@@ -843,7 +843,7 @@ var Queue = {
              jobs.create('deleteInsales', {
                id: job.data.id,
                taskid: job.data.taskid,
-               type: 4,
+               type: job.data.type,
                numbers: job.data.numbers,
                parts: job.data.parts,
                length: job.data.length,
