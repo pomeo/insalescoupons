@@ -6,8 +6,10 @@ mixin list(val)
        | создание купонов
       else if val.type == 2
        | синхронизация купонов
-      else if val.type == 3
+      else if val.type == 3 || val.type == 6
        | удаление купонов
+      else if val.type == 5
+       | синхронизация купонов
     if val.type == 1 || val.type == 3
       li
         strong Вариант: 
@@ -19,6 +21,15 @@ mixin list(val)
          | создать новые, удалив только использованные
         else if val.variant == 4
          | создать новые, удалив только не использованные
+    if val.type == 6
+      li
+        strong Вариант: 
+        if val.variant == 1
+         | удалить все текущие
+        else if val.variant == 3
+         | удалить только использованные
+        else if val.variant == 4
+         | удалить только не использованные
     if val.type == 1
       li
         strong Количество купонов: 
