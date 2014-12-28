@@ -471,8 +471,8 @@ router.post('/generate', function(req, res) {
                            discount: form['coupon-discount'],
                            until: form['coupon-until'],
                            group: form['coupon-group'],
-                           created_at  : new Date(),
-                           updated_at  : new Date()
+                           created_at : new Date(),
+                           updated_at : new Date()
                          });
                          T.save(function (err) {
                            if (err) {
