@@ -1199,8 +1199,8 @@ TasksSchema.add({
   act          : Number, // одно или много-разовый купон
   variant      : Number, // варианты развития задания
   typediscount : Number, // процент или денежная единица
-  discount     : Number, // величина скидки
-  until        : Date,   // срок действия купона
+  discount     : String, // величина скидки
+  until        : String, // срок действия купона
   group        : String, // название группы купона
   created_at   : Date,   // дата создания
   updated_at   : Date    // дата изменения
