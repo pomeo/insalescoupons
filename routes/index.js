@@ -1033,8 +1033,13 @@ jobs.process('deleteApp', function(job, done) {
 jobs.process('deleteInsales', function(job, done) {
   // удаляем купоны из магазина
   if (job.data.couponid === undefined) {
-    Queue.createJobCreateCoupons(job);
-    done();
+    if (job.data.type == 6) {
+      Queue.createJobCloseTask(job.data.taskid);
+      done();
+    } else {
+      Queue.createJobCreateCoupons(job);
+      done();
+    }
   } else {
     Queue.deleteCoupons(job, done);
   }
