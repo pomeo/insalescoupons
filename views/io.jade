@@ -14,4 +14,18 @@ block content
         li
           a(href="/opisanie") Описание
   div.uk-container-center.b-main
-    
+    form.uk-form
+      fieldset(data-uk-margin)
+        legend Импорт
+        div#upload-drop.uk-placeholder.uk-text-center(data-uk-tooltip="{pos:'bottom'}", title="Возможен импорт только <b>xlsx</b> файлов, формат можно посмотреть сделав экспорт. Максимальный размер <b>5МБ</b>.<br />При импорте новые купоны добавляются к существующим, если были изменения в существующих, они обновятся. Если нужно удалить какие-то, лучше сделать на предыдущей странице удаление, а потом импорт.")
+          i.uk-icon-cloud-upload.uk-icon-medium.uk-text-muted.uk-margin-small-right
+          | Перетащите файл сюда или 
+          a.uk-form-file выберите
+            input#upload-select(type="file", accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        div#progressbar.uk-progress.uk-hidden
+          div.uk-progress-bar(style="width:0%;")
+    form.uk-form
+      fieldset(data-uk-margin)
+        legend Экспорт
+        div.uk-text-center
+          button.uk-button(data-uk-tooltip="{pos:'top'}", title="В файл сохраняются все купоны находящиеся в базе приложения. Перед экспортом лучше сделать синхронизацию на предыдущей странице или дождаться выполнения всех заданий") скачать xlsx
