@@ -1193,6 +1193,16 @@ jobs.process('deleteApp', function(job, done) {
   Queue.deleteCouponsFromApp(job, done);
 });
 
+jobs.process('deleteCollections', function(job, done) {
+  // удаляем категорий из базы приложения
+  Queue.deleteCollectionsFromApp(job, done);
+});
+
+jobs.process('getCollections', function(job, done) {
+  // достаём категории из магазина
+  Queue.getCollections(job, done);
+});
+
 jobs.process('deleteInsales', function(job, done) {
   // удаляем купоны из магазина
   if (job.data.couponid === undefined) {
