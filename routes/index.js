@@ -692,7 +692,7 @@ var Queue = {
         Queue.createJobDeleteCollectionsFromApp(job);
         done();
       } else {
-        log('Удалены купоны из базы приложения');
+        log('Удалены категории из базы приложения');
         Queue.createJobGetCollections(job);
         done();
       }
@@ -728,10 +728,6 @@ var Queue = {
                 + '@'
                 + app.insalesurl
                 + '/admin/collections.xml', {
-                  query: {
-                    page: job.data.page,
-                    per_page: 250
-                  },
                   headers: {'Content-Type': 'application/xml'}
                 }).once('complete', function(o) {
           if (o instanceof Error) {
@@ -742,83 +738,58 @@ var Queue = {
               log('Ошибка');
               done();
             } else {
-              log('Заходим в функцию дёрганья купонов');
-              if (typeof o['collections'] === 'undefined') {
-                Queue.createJobGetCoupons(job);
-                done();
+              log('Заходим в функцию дёрганья категорий');
+              if (_.isUndefined(o['collections']['collection'][0])) {
+                var coll = o['collections']['collection'];
+                var collection = new Collections({
+                  insalesid           : job.data.id,
+                  colid               : coll['id'],
+                  parentid            : coll['parent-id'],
+                  name                : coll['title'],
+                  created_at          : coll['created-at'],
+                  updated_at          : coll['updated-at']
+                });
+                collection.save(function (err) {
+                  if (err) {
+                    log('Ошибка');
+                    log(err);
+                  } else {
+                    log('Сохранёна категория из магазина в базу приложения');
+                    Queue.createJobGetCoupons(job);
+                    done();
+                  }
+                });
               } else {
-                if (_.isUndefined(o['collections']['collection'][0])) {
-                  var coll = o['collections']['collection'];
+                async.each(o['collections']['collection'], function(coll, callback) {
                   var collection = new Collections({
                     insalesid           : job.data.id,
-                    guid                : coup['id'],
-                    code                : coup['code'],
-                    description         : coup['description'],
-                    act                 : coup['act-once'],
-                    actclient           : coup['act-once-for-client'],
-                    typeid              : coup['type-id'],
-                    discount            : coup['discount'],
-                    minprice            : coup['min-price'],
-                    worked              : coup['worked'],
-                    //discountcollections : coup['discount-collections'],
-                    expired_at          : coup['expired-at'],
-                    created_at          : coup['created-at'],
-                    updated_at          : coup['updated-at'],
-                    disabled            : coup['disabled']
+                    colid               : coll['id'],
+                    parentid            : coll['parent-id'],
+                    name                : coll['title'],
+                    created_at          : coll['created-at'],
+                    updated_at          : coll['updated-at']
                   });
                   collection.save(function (err) {
                     if (err) {
                       log('Ошибка');
                       log(err);
+                      callback();
                     } else {
-                      log('Сохранён купон из магазина в базу приложения');
-                      job.data.page++;
-                      Queue.createJobGetCollections(job);
-                      done();
+                      log('Сохранена категория из магазина в базу приложения');
+                      callback();
                     }
                   });
-                } else {
-                  async.each(o['collections']['collection'], function(coll, callback) {
-                    var collection = new Collections({
-                      insalesid           : job.data.id,
-                      guid                : coll['id'],
-                      code                : coll['code'],
-                      description         : coll['description'],
-                      act                 : coll['act-once'],
-                      actclient           : coll['act-once-for-client'],
-                      typeid              : coll['type-id'],
-                      discount            : coll['discount'],
-                      minprice            : coll['min-price'],
-                      worked              : coll['worked'],
-                      //discountcollections : coup['discount-collections'],
-                      expired_at          : coll['expired-at'],
-                      created_at          : coll['created-at'],
-                      updated_at          : coll['updated-at'],
-                      disabled            : coll['disabled']
-                    });
-                    collection.save(function (err) {
-                      if (err) {
-                        log('Ошибка');
-                        log(err);
-                        callback();
-                      } else {
-                        log('Сохранена категория из магазина в базу приложения');
-                        callback();
-                      }
-                    });
-                  }, function(e) {
-                       if (e) {
-                         log('A collections failed to process');
-                         Queue.createJobGetCollections(job);
-                         done();
-                       } else {
-                         log('All collections ' + job.data.page);
-                         job.data.page++;
-                         Queue.createJobGetCollections(job);
-                         done();
-                       }
-                     });
-                }
+                }, function(e) {
+                     if (e) {
+                       log('A collections failed to process');
+                       Queue.createJobGetCollections(job);
+                       done();
+                     } else {
+                       log('All collections');
+                       Queue.createJobGetCoupons(job);
+                       done();
+                     }
+                   });
               }
             }
           }
