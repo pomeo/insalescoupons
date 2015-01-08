@@ -268,58 +268,111 @@ function isEven(n) {
   return n === parseFloat(n)? !(n%2) : void 0;
 }
 
+function rowStyle(wb, odd, middle, header) {
+  var color = ((odd) ? 'E9E7E3' : 'FFFFFF');
+  var row = this;
+  row = wb.Style();
+  if (header) {
+    row.Font.Family('Arial');
+    row.Font.Size(12);
+    row.Font.WrapText(true);
+    row.Font.Alignment.Vertical('center');
+    row.Font.Alignment.Horizontal('center');
+    row.Border({
+      top:{
+        style:'thick'
+      },
+      bottom:{
+        style:'thick'
+      },
+      left:{
+        style:'thick'
+      },
+      right:{
+        style:'thick'
+      }
+    });
+  } else {
+    row.Font.Family('Arial');
+    row.Font.Size(12);
+    row.Font.WrapText(true);
+    row.Fill.Pattern('solid');
+    row.Fill.Color(color);
+    row.Font.Alignment.Vertical('center');
+    if (middle) {
+      row.Font.Alignment.Horizontal('center');
+    }
+    row.Border({
+      bottom:{
+        style:'thin',
+        color:'A0A0A4'
+      }
+    });
+  }
+  return row;
+}
+
+function createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, rowOddStyleMiddle) {
+  var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
+  var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
+  var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
+  var actclient = ((coup.act == 1) ? 'да' : 'нет');
+  var expired = moment(new Date(coup.expired_at))
+                .format('DD-MM-YYYY');
+  var worked = '';
+  if ((coup.disabled == 0) && (coup.worked == 0)) {
+    worked = 'да';
+  } else if ((coup.disabled == 0) && (coup.worked == 1)) {
+    worked = 'нет';
+  }
+  var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
+  ws.Row(i).Height(20);
+  ws.Cell(i,1)
+  .String(coup.code)
+  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+  ws.Cell(i,2)
+  .String(act)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,3)
+  .String(type_discount)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,4)
+  .Number(coup.discount)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,5)
+  .String(coup.description)
+  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+  ws.Cell(i,6)
+  .String(coup.discountcollections)
+  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+  ws.Cell(i,7)
+  .String(minprice)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,8)
+  .String(actclient)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,9)
+  .String(expired)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,10)
+  .String(disabled)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+  ws.Cell(i,11)
+  .String(worked)
+  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+}
+
 router.get('/export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
         var wb = new xl.WorkBook();
-        var ws = wb.WorkSheet('xxxxxxxzzzzzzzz');
-        var headerStyle = wb.Style();
-        headerStyle.Font.Family('Arial');
-        headerStyle.Font.Size(12);
-        headerStyle.Font.WrapText(true);
-        headerStyle.Font.Alignment.Vertical('center');
-        headerStyle.Font.Alignment.Horizontal('center');
-        headerStyle.Border({
-          top:{
-            style:'thick'
-          },
-          bottom:{
-            style:'thick'
-          },
-          left:{
-            style:'thick'
-          },
-          right:{
-            style:'thick'
-          }
-        });
-        var rowOddStyle = wb.Style();
-        rowOddStyle.Font.Family('Arial');
-        rowOddStyle.Font.Size(12);
-        rowOddStyle.Font.WrapText(true);
-        rowOddStyle.Fill.Pattern('solid');
-        rowOddStyle.Fill.Color('E9E7E3');
-        rowOddStyle.Font.Alignment.Vertical('center');
-        rowOddStyle.Border({
-          bottom:{
-            style:'thin',
-            color:'A0A0A4'
-          }
-        });
-        var rowEvenStyle = wb.Style();
-        rowEvenStyle.Font.Family('Arial');
-        rowEvenStyle.Font.Size(12);
-        rowEvenStyle.Font.WrapText(true);
-        rowEvenStyle.Fill.Pattern('solid');
-        rowEvenStyle.Fill.Color('FFFFFF');
-        rowEvenStyle.Font.Alignment.Vertical('center');
-        rowEvenStyle.Border({
-          bottom:{
-            style:'thin',
-            color:'A0A0A4'
-          }
-        });
+        var ws = wb.WorkSheet('Купоны');
+        var headerStyle = new rowStyle(wb, true, false, true);
+        var rowOddStyle = new rowStyle(wb, true, false, false);
+        var rowOddStyleMiddle = new rowStyle(wb, true, true, false);
+        var rowEvenStyle = new rowStyle(wb, false, false, false);
+        var rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
         ws.Row(1).Height(30);
         ws.Column(1).Width(30);
         ws.Column(2).Width(30);
@@ -327,24 +380,28 @@ router.get('/export', function(req, res) {
         ws.Column(4).Width(30);
         ws.Column(5).Width(30);
         ws.Column(6).Width(30);
+        ws.Column(7).Width(30);
+        ws.Column(8).Width(30);
+        ws.Column(9).Width(30);
+        ws.Column(10).Width(30);
+        ws.Column(11).Width(30);
         ws.Cell(1,1).String('Код купона').Style(headerStyle);
-        ws.Cell(1,2).String('Описание').Style(headerStyle);
-        ws.Cell(1,3).String('Описание').Style(headerStyle);
-        ws.Cell(1,4).String('Описание').Style(headerStyle);
+        ws.Cell(1,2).String('Тип купона').Style(headerStyle);
+        ws.Cell(1,3).String('Тип скидки').Style(headerStyle);
+        ws.Cell(1,4).String('Величина скидки').Style(headerStyle);
         ws.Cell(1,5).String('Описание').Style(headerStyle);
-        ws.Cell(1,6).String('Описание').Style(headerStyle);
+        ws.Cell(1,6).String('Группа категорий').Style(headerStyle);
+        ws.Cell(1,7).String('Минимальная сумма заказа').Style(headerStyle);
+        ws.Cell(1,8).String('Использовать только один\nраз для каждого клиента').Style(headerStyle);
+        ws.Cell(1,9).String('Действителен по').Style(headerStyle);
+        ws.Cell(1,10).String('Заблокирован').Style(headerStyle);
+        ws.Cell(1,11).String('Использован').Style(headerStyle);
         Coupons.find({
           insalesid: req.session.insalesid
         }, function(err, coupons) {
              var i = 2;
              async.eachSeries(coupons, function(coup, callback) {
-               ws.Row(i).Height(20);
-               ws.Cell(i,1)
-               .String(coup.code)
-               .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-               ws.Cell(i,2)
-               .String(coup.description)
-               .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+               createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, rowOddStyleMiddle);
                i++;
                callback();
              }, function(e) {
@@ -352,7 +409,7 @@ router.get('/export', function(req, res) {
                     log('Ошибка');
                     res.sendStatus(200)
                   } else {
-                    //res.sendStatus(200)
+                    log('Отдаём xlsx файл');
                     wb.write('coupons.xlsx', res);
                   }
                 });
@@ -862,6 +919,7 @@ var Queue = {
               } else {
                 if (_.isUndefined(o['discount-codes']['discount-code'][0])) {
                   var coup = o['discount-codes']['discount-code'];
+                  var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id').join(',');
                   var coupon = new Coupons({
                     insalesid           : job.data.id,
                     guid                : coup['id'],
@@ -873,7 +931,7 @@ var Queue = {
                     discount            : coup['discount'],
                     minprice            : coup['min-price'],
                     worked              : coup['worked'],
-                    //discountcollections : coup['discount-collections'],
+                    discountcollections : collection,
                     expired_at          : coup['expired-at'],
                     created_at          : coup['created-at'],
                     updated_at          : coup['updated-at'],
@@ -892,6 +950,7 @@ var Queue = {
                   });
                 } else {
                   async.each(o['discount-codes']['discount-code'], function(coup, callback) {
+                    var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id').join(',');
                     var coupon = new Coupons({
                       insalesid           : job.data.id,
                       guid                : coup['id'],
@@ -903,7 +962,7 @@ var Queue = {
                       discount            : coup['discount'],
                       minprice            : coup['min-price'],
                       worked              : coup['worked'],
-                      //discountcollections : coup['discount-collections'],
+                      discountcollections : collection,
                       expired_at          : coup['expired-at'],
                       created_at          : coup['created-at'],
                       updated_at          : coup['updated-at'],
@@ -946,7 +1005,6 @@ var Queue = {
   createJobDeleteCoupons: function(job) {
     var C = Coupons.find({insalesid: job.data.id});
     if (job.data.variant == 3) {
-      log('заходим');
       C.and([{'worked': false}, {'disabled': false}]);
     } else if (job.data.variant == 4) {
       C.and([{'worked': true}, {'disabled': false}]);
@@ -1109,7 +1167,6 @@ var Queue = {
                 discount            : o['discount-code']['discount'],
                 minprice            : o['discount-code']['min-price'],
                 worked              : o['discount-code']['worked'],
-                //discountcollections : o['discount-code']['discount-collections'],
                 expired_at          : o['discount-code']['expired-at'],
                 created_at          : o['discount-code']['created-at'],
                 updated_at          : o['discount-code']['updated-at'],
@@ -1374,10 +1431,10 @@ CouponsSchema.add({
   act                 : Boolean, // одноразовый или многоразовый купон
   actclient           : Boolean, // одноразовый для зарегистрированного покупателя
   typeid              : Number, // тип скидки
-  discount            : Number, // размер скидки
+  discount            : String, // размер скидки
   minprice            : Number, // минимальная цена при которой купон не раборает
   worked              : Boolean, // использованный купон или нет
-  discountcollections : Array, // массив id разделов
+  discountcollections : String, // строка id разделов разделённых запятой
   expired_at          : Date, // дата истечения купона, от insales
   created_at          : Date, // дата создания купона, от insales
   updated_at          : Date, // дата обновления купона, от insales
