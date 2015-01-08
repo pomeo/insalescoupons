@@ -920,37 +920,49 @@ var Queue = {
                 if (_.isUndefined(o['discount-codes']['discount-code'][0])) {
                   var coup = o['discount-codes']['discount-code'];
                   var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id').join(',');
-                  var coupon = new Coupons({
-                    insalesid           : job.data.id,
-                    guid                : coup['id'],
-                    code                : coup['code'],
-                    description         : coup['description'],
-                    act                 : coup['act-once'],
-                    actclient           : coup['act-once-for-client'],
-                    typeid              : coup['type-id'],
-                    discount            : coup['discount'],
-                    minprice            : coup['min-price'],
-                    worked              : coup['worked'],
-                    discountcollections : collection,
-                    expired_at          : coup['expired-at'],
-                    created_at          : coup['created-at'],
-                    updated_at          : coup['updated-at'],
-                    disabled            : coup['disabled']
-                  });
-                  coupon.save(function (err) {
-                    if (err) {
-                      log('Ошибка');
-                      log(err);
-                    } else {
-                      log('Сохранён купон из магазина в базу приложения');
-                      job.data.page++;
-                      Queue.createJobGetCoupons(job);
-                      done();
-                    }
-                  });
-                } else {
-                  async.each(o['discount-codes']['discount-code'], function(coup, callback) {
-                    var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id').join(',');
+                  if (!_.isEmpty(collection)) {
+                      var arr = [];
+                      var C = Collections.find({insalesid:job.data.id});
+                      C.find({'colid': {$in:collection}});
+                      C.exec(function(err, collec) {
+                        if (err) {
+                          log(err);
+                        } else {
+                          for (var i = 0, len = collec.length; i < len; i++) {
+                            arr.push(collec[i].name);
+                          }
+                          var coupon = new Coupons({
+                            insalesid           : job.data.id,
+                            guid                : coup['id'],
+                            code                : coup['code'],
+                            description         : coup['description'],
+                            act                 : coup['act-once'],
+                            actclient           : coup['act-once-for-client'],
+                            typeid              : coup['type-id'],
+                            discount            : coup['discount'],
+                            minprice            : coup['min-price'],
+                            worked              : coup['worked'],
+                            discountcollections : arr.join(',').replace( /,/g,',\n'),
+                            collections_id      : collection,
+                            expired_at          : coup['expired-at'],
+                            created_at          : coup['created-at'],
+                            updated_at          : coup['updated-at'],
+                            disabled            : coup['disabled']
+                          });
+                          coupon.save(function (err) {
+                            if (err) {
+                              log('Ошибка');
+                              log(err);
+                            } else {
+                              log('Сохранён купон из магазина в базу приложения');
+                              job.data.page++;
+                              Queue.createJobGetCoupons(job);
+                              done();
+                            }
+                          });
+                        }
+                      });
+                  } else {
                     var coupon = new Coupons({
                       insalesid           : job.data.id,
                       guid                : coup['id'],
@@ -962,7 +974,8 @@ var Queue = {
                       discount            : coup['discount'],
                       minprice            : coup['min-price'],
                       worked              : coup['worked'],
-                      discountcollections : collection,
+                      discountcollections : 'Все',
+                      collections_id      : '',
                       expired_at          : coup['expired-at'],
                       created_at          : coup['created-at'],
                       updated_at          : coup['updated-at'],
@@ -972,12 +985,89 @@ var Queue = {
                       if (err) {
                         log('Ошибка');
                         log(err);
-                        callback();
                       } else {
                         log('Сохранён купон из магазина в базу приложения');
-                        callback();
+                        job.data.page++;
+                        Queue.createJobGetCoupons(job);
+                        done();
                       }
                     });
+                  }
+                } else {
+                  async.each(o['discount-codes']['discount-code'], function(coup, callback) {
+                    var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id');
+                    if (!_.isEmpty(collection)) {
+                      var arr = [];
+                      var C = Collections.find({insalesid:job.data.id});
+                      C.find({'colid': {$in:collection}});
+                      C.exec(function(err, collec) {
+                        if (err) {
+                          log(err);
+                          callback();
+                        } else {
+                          for (var i = 0, len = collec.length; i < len; i++) {
+                            arr.push(collec[i].name);
+                          }
+                          var coupon = new Coupons({
+                            insalesid           : job.data.id,
+                            guid                : coup['id'],
+                            code                : coup['code'],
+                            description         : coup['description'],
+                            act                 : coup['act-once'],
+                            actclient           : coup['act-once-for-client'],
+                            typeid              : coup['type-id'],
+                            discount            : coup['discount'],
+                            minprice            : coup['min-price'],
+                            worked              : coup['worked'],
+                            discountcollections : arr.join(',').replace( /,/g,',\n'),
+                            collections_id      : collection.join(','),
+                            expired_at          : coup['expired-at'],
+                            created_at          : coup['created-at'],
+                            updated_at          : coup['updated-at'],
+                            disabled            : coup['disabled']
+                          });
+                          coupon.save(function (err) {
+                            if (err) {
+                              log('Ошибка');
+                              log(err);
+                              callback();
+                            } else {
+                              log('Сохранён купон из магазина в базу приложения');
+                              callback();
+                            }
+                          });
+                        }
+                      });
+                    } else {
+                      var coupon = new Coupons({
+                        insalesid           : job.data.id,
+                        guid                : coup['id'],
+                        code                : coup['code'],
+                        description         : coup['description'],
+                        act                 : coup['act-once'],
+                        actclient           : coup['act-once-for-client'],
+                        typeid              : coup['type-id'],
+                        discount            : coup['discount'],
+                        minprice            : coup['min-price'],
+                        worked              : coup['worked'],
+                        discountcollections : 'Все',
+                        collections_id      : '',
+                        expired_at          : coup['expired-at'],
+                        created_at          : coup['created-at'],
+                        updated_at          : coup['updated-at'],
+                        disabled            : coup['disabled']
+                      });
+                      coupon.save(function (err) {
+                        if (err) {
+                          log('Ошибка');
+                          log(err);
+                          callback();
+                        } else {
+                          log('Сохранён купон из магазина в базу приложения');
+                          callback();
+                        }
+                      });
+                    }
                   }, function(e) {
                        if (e) {
                          log('A coupons failed to process');
@@ -1434,7 +1524,8 @@ CouponsSchema.add({
   discount            : String, // размер скидки
   minprice            : Number, // минимальная цена при которой купон не раборает
   worked              : Boolean, // использованный купон или нет
-  discountcollections : String, // строка id разделов разделённых запятой
+  discountcollections : String, // строка названий разделов
+  collections_id      : String, // строка id разделов разделённых запятой
   expired_at          : Date, // дата истечения купона, от insales
   created_at          : Date, // дата создания купона, от insales
   updated_at          : Date, // дата обновления купона, от insales
