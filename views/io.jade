@@ -14,6 +14,11 @@ block content
         li
           a(href="/opisanie") Описание
   div.uk-container-center.b-main
+    form.uk-form.uk-margin-small-top
+      fieldset(data-uk-margin)
+        legend Экспорт
+        div.uk-text-center
+          button.uk-button(data-uk-tooltip="{pos:'top'}", title="В файл сохраняются все купоны находящиеся в базе приложения. Перед экспортом лучше сделать синхронизацию на предыдущей странице или дождаться выполнения всех заданий, если они есть") скачать xlsx
     form.uk-form
       fieldset(data-uk-margin)
         legend Импорт
@@ -24,8 +29,27 @@ block content
             input#upload-select(type="file", accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         div#progressbar.uk-progress.uk-hidden
           div.uk-progress-bar(style="width:0%;")
-    form.uk-form
-      fieldset(data-uk-margin)
-        legend Экспорт
-        div.uk-text-center
-          button.uk-button(data-uk-tooltip="{pos:'top'}", title="В файл сохраняются все купоны находящиеся в базе приложения. Перед экспортом лучше сделать синхронизацию на предыдущей странице или дождаться выполнения всех заданий") скачать xlsx
+    h3.uk-margin-top-remove Описание столбцов
+    dl.uk-description-list-line
+      dt Код купона
+      dd буквы и символы
+      dt Тип купона
+      dd одноразовый/многоразовый
+      dt Тип скидки
+      dd процент/денежная величина
+      dt Величина скидки
+      dd Число, возможна дробная часть отделённая точкой(например 10.23 или 15)
+      dt Описание
+      dd Текстовое описание купона
+      dt Группа категорий
+      dd При импорте игнорируется
+      dt Минимальная сумма заказа
+      dd Число
+      dt Использовать только один раз для каждого клиента
+      dd да/нет
+      dt Действитель по
+      dd Дата в формате число-месяц-год, например 01-12-2015
+      dt Заблокирован
+      dd да/нет
+      dt Использован
+      dd При импорте игнорируется
