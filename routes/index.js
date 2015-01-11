@@ -18,12 +18,13 @@ var express     = require('express'),
     hat         = require('hat'),
     rack        = hat.rack(),
     async       = require('async'),
-    xlsx        = require('node-xlsx'),
     cc          = require('coupon-code'),
     _           = require('lodash'),
     array       = require('array'),
     xl          = require('excel4node'),
+    XLSX        = require('xlsx'),
     winston     = require('winston'),
+    formidable  = require('formidable'),
     Logentries  = require('winston-logentries');
 
 if (process.env.NODE_ENV === 'development') {
