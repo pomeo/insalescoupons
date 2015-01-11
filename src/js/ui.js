@@ -95,67 +95,73 @@ $(document).ready(function() {
       $("#b-discount").prepend("<i class='uk-icon-rub'></i>");
     }
   });
-  var grid;
-  //var loader = new Slick.Data.RemoteModel();
-  var columns = [
-    {id: "title", name: "Title", field: "title", sortable: true},
-    {id: "duration", name: "Duration", field: "duration", sortable: true},
-    {id: "%", name: "% Complete", field: "percentComplete", sortable: true},
-    {id: "start", name: "Start", field: "start", sortable: true},
-    {id: "finish", name: "Finish", field: "finish", sortable: true},
-    {id: "effort-driven", name: "Effort Driven", field: "effortDriven", sortable: true}
-  ];
-  var options = {
-    enableCellNavigation: true,
-    enableColumnReorder: false,
-    multiColumnSort: true
-  };
+  if ($("#coupons")) {
+    var grid;
+    var columns = [
+      {id: "code", name: "Код купона", field: "code", sortable: true},
+      {id: "type", name: "Тип", field: "type", sortable: true},
+      {id: "coll", name: "Категории", field: "coll", sortable: true},
+      {id: "disc", name: "Скидка", field: "disc", sortable: true},
+      {id: "expired", name: "Действителен по", field: "expired", sortable: true},
+      {id: "disabled", name: "Заблокирован", field: "disabled", sortable: true},
+      {id: "worked", name: "Использован", field: "worked", sortable: true}
+    ];
+    var options = {
+      enableCellNavigation: true,
+      enableColumnReorder: false,
+      syncColumnCellResize: true,
+      multiColumnSort: true,
+      forceFitColumns: true
+    };
 
-  var loadingIndicator = null;
+    var loadingIndicator = null;
 
-  $.ajax({
-    url: '/data',
-    dataType: "json",
-    error: function (jqXHR, textStatus, errorThrown) {
-      console.log(jqXHR);
-    },
-    success: function (data) {
-      for (var i = 0; i < data.length; i++) {
-        data[i] = {
-          title: data[i].title,
-          duration: data[i].duration,
-          percentComplete: data[i].percentComplete,
-          start: data[i].start,
-          finish: data[i].finish,
-          effortDriven: data[i].effortDriven
-        }
-      }
-      grid = new Slick.Grid("#coupons", data, columns, options);
-      grid.onSort.subscribe(function (e, args) {
-        var cols = args.sortCols;
-        data.sort(function (dataRow1, dataRow2) {
-          for (var i = 0, l = cols.length; i < l; i++) {
-            var field = cols[i].sortCol.field;
-            var sign = cols[i].sortAsc ? 1 : -1;
-            var value1 = dataRow1[field], value2 = dataRow2[field];
-            var result = (value1 == value2 ? 0 : (value1 > value2 ? 1 : -1)) * sign;
-            if (result != 0) {
-              return result;
-            }
+    $.ajax({
+      url: '/data',
+      dataType: "json",
+      error: function (jqXHR, textStatus, errorThrown) {
+        console.log(jqXHR);
+      },
+      success: function(data) {
+        $("#b-coupon-sum").html(data.length);
+        for (var i = 0; i < data.length; i++) {
+          data[i] = {
+            code: data[i].code,
+            type: data[i].type,
+            coll: data[i].coll,
+            disc: data[i].disc,
+            expired: data[i].expired,
+            disabled: data[i].disabled,
+            worked: data[i].worked
           }
-          return 0;
+        }
+        grid = new Slick.Grid("#coupons", data, columns, options);
+        grid.onSort.subscribe(function (e, args) {
+          var cols = args.sortCols;
+          data.sort(function (dataRow1, dataRow2) {
+            for (var i = 0, l = cols.length; i < l; i++) {
+              var field = cols[i].sortCol.field;
+              var sign = cols[i].sortAsc ? 1 : -1;
+              var value1 = dataRow1[field], value2 = dataRow2[field];
+              var result = (value1 == value2 ? 0 : (value1 > value2 ? 1 : -1)) * sign;
+              if (result != 0) {
+                return result;
+              }
+            }
+            return 0;
+          });
+          grid.invalidate();
+          grid.render();
         });
-        grid.invalidate();
-        grid.render();
-      });
-    }
-  });
-  $(function(){
+      }
+    });
+  }
+  if ($("#progressbar")) {
     var progressbar = $("#progressbar"),
         bar         = progressbar.find('.uk-progress-bar'),
         settings    = {
-          action: '/', // upload url
-          allow : '*.(xlsx)', // allow only images
+          action: '/import',
+          allow : '*.(xlsx)',
           loadstart: function() {
             bar.css("width", "0%").text("0%");
             progressbar.removeClass("uk-hidden");
@@ -174,5 +180,5 @@ $(document).ready(function() {
         };
     var select = $.UIkit.uploadSelect($("#upload-select"), settings),
         drop   = $.UIkit.uploadDrop($("#upload-drop"), settings);
-  });
+  }
 });
