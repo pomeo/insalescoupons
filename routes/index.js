@@ -1510,22 +1510,33 @@ var Queue = {
     });
   },
 
-  createJobCloseTask: function(taskid) {
+  createJobCloseTask: function(taskid, message) {
     log('Создаём задание на зыкрытие');
     log(taskid);
-    jobs.create('close', {
-      taskid: taskid
-    }).priority('normal').save();
+    if (_.isUndefined(message)) {
+      jobs.create('close', {
+        taskid: taskid,
+        message: undefined
+      }).priority('normal').save();
+    } else {
+      jobs.create('close', {
+        taskid: taskid,
+        message: message
+      }).priority('normal').save();
+    }
   },
 
-  closeTask: function(taskid, done) {
+  closeTask: function(taskid, message, done) {
     log('Закрываем таск');
     Tasks.findById(taskid, function(err, task) {
       task.status = 3;
+      if (!_.isUndefined(message)) {
+        task.message = message;
+      }
       task.save(function(err) {
         if (err) {
           log(err);
-          Queue.createJobCloseTask(taskid);
+          Queue.createJobCloseTask(taskid, message);
           done();
         } else {
           log('Done');
@@ -1712,7 +1723,9 @@ var TasksSchema = new Schema();
 TasksSchema.add({
   insalesid    : { type: Number, index: true }, // id магазина
   type         : { type: Number, index: true }, // тип задания
+  path         : String, // путь до файла во время импорта
   status       : Number, // статус задания
+  message      : String,
   groupid      : { type: String, index: true }, // id группы в цепочке заданий
   numbers      : Number, // количество купонов
   parts        : Number, // количество частей купона
