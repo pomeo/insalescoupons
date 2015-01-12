@@ -622,6 +622,45 @@ router.get('/data', function(req, res) {
     Apps.findOne({insalesid:req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
         var data = [];
+        Coupons.find({
+          insalesid: req.session.insalesid
+        }, function(err, coupons) {
+             var i = 0;
+             async.eachSeries(coupons, function(coup, callback) {
+               var type_discount = ((coup.typeid == 1) ? ' %' : ' руб');
+               var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
+               var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
+               var actclient = ((coup.act == 1) ? 'да' : 'нет');
+               var expired = moment(new Date(coup.expired_at))
+                             .format('DD-MM-YYYY');
+               var worked = ' ';
+               if ((coup.disabled == 0) && (coup.worked == 0)) {
+                 worked = 'да';
+               } else if ((coup.disabled == 0) && (coup.worked == 1)) {
+                 worked = 'нет';
+               }
+               var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
+               data[i] = {
+                 code: coup.code,
+                 type: act,
+                 typeid: coup.act,
+                 coll: coup.discountcollections,
+                 disc: coup.discount + type_discount,
+                 expired: expired,
+                 disabled: disabled,
+                 worked: worked
+               };
+               i++;
+               callback();
+             }, function(e) {
+                  if (e) {
+                    log('Ошибка');
+                    res.sendStatus(200)
+                  } else {
+                    res.json(data);
+                  }
+                });
+           });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
