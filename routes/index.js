@@ -259,7 +259,34 @@ router.get('/import-export', function(req, res) {
 
 router.post('/import', function(req, res) {
   if (req.session.insalesid) {
+    var form = new formidable.IncomingForm();
+    form.keepExtensions = true;
+    form.on('error', function(err) {
+      log(err);
+    });
 
+    form.on('end', function() {
+      res.send('ok');
+    });
+
+    form.parse(req, function(err, fields, files) {
+      var T = new Tasks({
+        insalesid: req.session.insalesid,
+        type: 7,
+        status: 1,
+        path: files['files[]'].path,
+        created_at : new Date(),
+        updated_at : new Date()
+      });
+      T.save(function (err) {
+        if (err) {
+          log('Ошибка');
+          log(err);
+        } else {
+          log('Done');
+        }
+      });
+    });
   } else {
     res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
   }
