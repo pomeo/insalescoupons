@@ -1007,6 +1007,9 @@ var Queue = {
                 } else if (job.data.variant === 2) {
                   Queue.createJobCreateCoupons(job);
                   done();
+                } else if (job.data.type === 7) {
+                  Queue.createJobParseXLSX(job);
+                  done();
                 } else {
                   log('Конец');
                   Queue.createJobCloseTask(job.data.taskid);
