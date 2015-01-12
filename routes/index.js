@@ -689,12 +689,14 @@ setInterval(function() {
          for (var i = 0; i < result.length; i++) {
            Tasks.findById(result[i].id, function (err, task) {
              if (task.status == 1) {
+               var j = {};
                if (task.type == 5) {
-                 var j = {
+                 j = {
                    data: {
                      id: task.insalesid,
                      taskid: task._id,
                      type: task.type,
+                     path: null,
                      numbers: null,
                      parts: null,
                      length: null,
@@ -707,11 +709,12 @@ setInterval(function() {
                    }
                  };
                } else if (task.type == 6) {
-                 var j = {
+                 j = {
                    data: {
                      id: task.insalesid,
                      taskid: task._id,
                      type: task.type,
+                     path: null,
                      numbers: null,
                      parts: null,
                      length: null,
@@ -723,12 +726,31 @@ setInterval(function() {
                      group: null
                    }
                  };
-               } else {
-                 var j = {
+               } else if (task.type == 7) {
+                 j = {
                    data: {
                      id: task.insalesid,
                      taskid: task._id,
                      type: task.type,
+                     path: task.path,
+                     numbers: null,
+                     parts: null,
+                     length: null,
+                     act: null,
+                     variant: null,
+                     typediscount: null,
+                     discount: null,
+                     until: null,
+                     group: null
+                   }
+                 };
+               } else {
+                 j = {
+                   data: {
+                     id: task.insalesid,
+                     taskid: task._id,
+                     type: task.type,
+                     path: null,
                      numbers: task.numbers,
                      parts: task.parts,
                      length: task.length,
@@ -767,6 +789,7 @@ var Queue = {
       id: job.data.id,
       taskid: job.data.taskid,
       type: job.data.type,
+      path: job.data.path,
       numbers: job.data.numbers,
       parts: job.data.parts,
       length: job.data.length,
@@ -799,6 +822,7 @@ var Queue = {
       id: job.data.id,
       taskid: job.data.taskid,
       type: job.data.type,
+      path: job.data.path,
       numbers: job.data.numbers,
       parts: job.data.parts,
       length: job.data.length,
@@ -834,6 +858,7 @@ var Queue = {
       taskid: job.data.taskid,
       page: p,
       type: job.data.type,
+      path: job.data.path,
       numbers: job.data.numbers,
       parts: job.data.parts,
       length: job.data.length,
@@ -936,6 +961,7 @@ var Queue = {
       taskid: job.data.taskid,
       page: p,
       type: job.data.type,
+      path: job.data.path,
       numbers: job.data.numbers,
       parts: job.data.parts,
       length: job.data.length,
