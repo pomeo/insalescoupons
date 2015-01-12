@@ -347,7 +347,7 @@ function createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, 
   var actclient = ((coup.act == 1) ? 'да' : 'нет');
   var expired = moment(new Date(coup.expired_at))
                 .format('DD-MM-YYYY');
-  var worked = '';
+  var worked = ' ';
   if ((coup.disabled == 0) && (coup.worked == 0)) {
     worked = 'да';
   } else if ((coup.disabled == 0) && (coup.worked == 1)) {
