@@ -1343,6 +1343,45 @@ var Queue = {
                 if (_.isUndefined(coupon[0])) {
                   log('пусто');
                 } else {
+                  var type_discount = '';
+                  var minprice = ' ';
+                  var act = '';
+                  var actclient = '';
+                  var disabled = '';
+                  if (sheet[i]['Тип скидки'] == 'процент') {
+                    type_discount = 1;
+                  } else if (sheet[i]['Тип скидки'] == 'денежная величина') {
+                    type_discount = 0;
+                  }
+                  if (sheet[i]['Тип купона'] == 'одноразовый') {
+                    act = 1;
+                  } else if (sheet[i]['Тип купона'] == 'многоразовый') {
+                    act = 0;
+                  }
+                  if (sheet[i]['Заблокирован'] == 'да') {
+                    disabled = 1;
+                  } else if (sheet[i]['Заблокирован'] == 'нет') {
+                    disabled = 0;
+                  }
+                  if (sheet[i]['Использовать только один\nраз для каждого клиента'] == 'да') {
+                    actclient = 1;
+                  } else if (sheet[i]['Использовать только один\nраз для каждого клиента'] == 'нет') {
+                    actclient = 0;
+                  }
+                  if (sheet[i]['Код купона'] == coupon[0].code) {
+                    jobs.create('update', {
+                      id: job.data.id,
+                      taskid: job.data.taskid,
+                      type: 2,
+                      coupon: sheet[i]['Код купона'],
+                      act: act,
+                      discount: sheet[i]['Величина скидки'],
+                      typediscount: type_discount,
+                      until: sheet[i]['Действителен по']
+                    }).delay(600).priority('normal').save();
+                  } else if (sheet[i]['Тип купона'] == '') {
+
+                  }
                   log(coupon[0].code);
                 }
               }
