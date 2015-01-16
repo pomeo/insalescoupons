@@ -1324,7 +1324,7 @@ var Queue = {
           error = 1;
           message = 'Ошибка в ячейке H' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Действителен по'])) {
+        } else if (_.isUndefined(sheet[i]['Действителен по']) && !moment(sheet[i]['Действителен по'], 'DD-MM-YYYY', true).isValid()) {
           error = 1;
           message = 'Ошибка в ячейке I' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
