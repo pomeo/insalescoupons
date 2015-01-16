@@ -344,7 +344,7 @@ function createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, 
   var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
   var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
   var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
-  var actclient = ((coup.act == 1) ? 'да' : 'нет');
+  var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
   var expired = moment(new Date(coup.expired_at))
                 .format('DD-MM-YYYY');
   var worked = ' ';
