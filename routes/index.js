@@ -1764,7 +1764,7 @@ TasksSchema.add({
   type         : { type: Number, index: true }, // тип задания
   path         : String, // путь до файла во время импорта
   status       : Number, // статус задания
-  message      : String,
+  message      : String, // сообщение об ошибке
   groupid      : { type: String, index: true }, // id группы в цепочке заданий
   numbers      : Number, // количество купонов
   parts        : Number, // количество частей купона
