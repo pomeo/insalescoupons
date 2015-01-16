@@ -63,6 +63,16 @@ block content
                   i.uk-icon-rub
                 input.b-discount#discount(name="discount", type="text", value="#{discount}")
             div.uk-form-row
+              label
+                input.uk-margin-small-right(name="actclient", type="checkbox")
+                | Использовать только один раз для каждого клиента
+                i.uk-icon-question-circle.uk-icon-medium.uk-margin-small-left(data-uk-tooltip="{pos:'left'}", title="Купон будет работать только для зарегистрированных пользователей")
+            div.uk-form-row
+              div.uk-form-icon.uk-margin-small-right
+                i.uk-icon-rub
+                input.b-minprice#minprice(name="minprice", type="text")
+              Минимальная сумма заказа
+            div.uk-form-row
               div.uk-form-icon
                 i.uk-icon-calendar
                 input#until(name="until", type="text", value="#{expired}", data-uk-datepicker="{format:'DD.MM.YYYY'}")
