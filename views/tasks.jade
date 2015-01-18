@@ -10,6 +10,8 @@ mixin list(val)
        | удаление купонов
       else if val.type == 5
        | синхронизация купонов
+      else if val.type == 7
+       | импорт купонов
     if val.type == 1 || val.type == 3
       li
         strong Вариант: 
@@ -34,6 +36,10 @@ mixin list(val)
       li
         strong Количество купонов: 
         = val.numbers
+    if !_.isUndefined(val.message)
+      li
+        strong Ошибка: 
+        = val.message
     if val.status == 2 || val.status == 1
       li
         strong Дата создания: 
@@ -71,11 +77,19 @@ block content
         div.uk-alert.uk-alert-warning(data-uk-tooltip, title="выполняется")
           +list(val)
       else if val.status == 3
-        div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
-          +list(val)
+        if _.isUndefined(val.message)
+          div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
+            +list(val)
+        else
+          div.uk-alert.uk-alert-danger(data-uk-tooltip, title="выполнено")
+            +list(val)
       else if val.status == 1
         div.uk-alert(data-uk-tooltip, title="в очереди")
           +list(val)
     each val in done
-      div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
-        +list(val)
+      if _.isUndefined(val.message)
+        div.uk-alert.uk-alert-success(data-uk-tooltip, title="выполнено")
+          +list(val)
+      else
+        div.uk-alert.uk-alert-danger(data-uk-tooltip, title="выполнено")
+          +list(val)
