@@ -434,7 +434,7 @@ router.get('/export', function(req, res) {
         ws.Cell(1,5).String('Описание').Style(headerStyle);
         ws.Cell(1,6).String('Группа категорий').Style(headerStyle);
         ws.Cell(1,7).String('Минимальная сумма заказа').Style(headerStyle);
-        ws.Cell(1,8).String('Использовать только один\nраз для каждого клиента').Style(headerStyle);
+        ws.Cell(1,8).String('Один раз для каждого клиента').Style(headerStyle);
         ws.Cell(1,9).String('Действителен по').Style(headerStyle);
         ws.Cell(1,10).String('Заблокирован').Style(headerStyle);
         ws.Cell(1,11).String('Использован').Style(headerStyle);
