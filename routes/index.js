@@ -210,7 +210,6 @@ router.post('/input', function(req, res) {
             insalesid: req.session.insalesid,
             type: 5,
             status: 1,
-            groupid: rack(),
             created_at : new Date(),
             updated_at : new Date()
           });
@@ -230,7 +229,6 @@ router.post('/input', function(req, res) {
             insalesid: req.session.insalesid,
             type: 6,
             status: 1,
-            groupid: rack(),
             variant: parseInt(req.param('variants')),
             created_at : new Date(),
             updated_at : new Date()
