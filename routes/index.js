@@ -1326,131 +1326,184 @@ var Queue = {
   },
 
   createJobParseXLSX: function(job) {
-    log(job.data.path);
+    var iter = 1;
     var error = 0;
-    var message = '';
     var workbook = XLSX.readFile(job.data.path);
     var sheet = XLSX.utils.sheet_to_row_object_array(workbook.Sheets['Купоны']);
-    for (var i = 0; i < sheet.length; i++) {
+    async.each(sheet, function(row, callback) {
       if (error == 0) {
-        if (_.isUndefined(sheet[i]['Код купона'])) {
+        iter++;
+        if (_.isUndefined(row['Код купона'])) {
+          var message = 'Ошибка в ячейке A' + iter;
           error = 1;
-          message = 'Ошибка в ячейке A' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Тип купона'])) {
+          callback();
+        } else if (_.isUndefined(row['Тип купона'])) {
+          var message = 'Ошибка в ячейке B' + iter;
           error = 1;
-          message = 'Ошибка в ячейке B' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Тип скидки'])) {
+          callback();
+        } else if (_.isUndefined(row['Тип скидки'])) {
+          var message = 'Ошибка в ячейке C' + iter;
           error = 1;
-          message = 'Ошибка в ячейке C' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Величина скидки'])) {
+          callback();
+        } else if (_.isUndefined(row['Величина скидки'])) {
+          var message = 'Ошибка в ячейке D' + iter;
           error = 1;
-          message = 'Ошибка в ячейке D' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Описание'])) {
+          callback();
+        } else if (_.isUndefined(row['Один раз для каждого клиента'])) {
+          var message = 'Ошибка в ячейке H' + iter;
           error = 1;
-          message = 'Ошибка в ячейке E' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Минимальная сумма заказа'])) {
+          callback();
+        } else if (_.isUndefined(row['Заблокирован'])) {
+          var message = 'Ошибка в ячейке J' + iter;
           error = 1;
-          message = 'Ошибка в ячейке G' + i+1;
           Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Использовать только один\nраз для каждого клиента'])) {
-          error = 1;
-          message = 'Ошибка в ячейке H' + i+1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Действителен по']) && !moment(sheet[i]['Действителен по'], 'DD-MM-YYYY', true).isValid()) {
-          error = 1;
-          message = 'Ошибка в ячейке I' + i+1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-        } else if (_.isUndefined(sheet[i]['Заблокирован'])) {
-          error = 1;
-          message = 'Ошибка в ячейке J' + i+1;
-          Queue.createJobCloseTask(job.data.taskid, message);
+          callback();
         } else {
-          if (message == '') {
-            var C = Coupons.find({insalesid:job.data.id});
-            C.find({code:sheet[i]['Код купона']});
-            C.exec(function(err, coupon) {
-              if (err) {
-                log(err);
+          var C = Coupons.find({insalesid:job.data.id});
+          C.find({code:row['Код купона']});
+          C.exec(function(err, coupon) {
+            if (err) {
+              log(err);
+              callback();
+            } else {
+              var type_discount = '';
+              var minprice = '';
+              var act = '';
+              var actclient = '';
+              var disabled = '';
+              if (row['Тип скидки'] == 'процент') {
+                type_discount = 1;
+              } else if (row['Тип скидки'] == 'денежная величина') {
+                type_discount = 2;
+              }
+              if (row['Тип купона'] == 'одноразовый') {
+                act = true;
+              } else if (row['Тип купона'] == 'многоразовый') {
+                act = false;
+              }
+              if (row['Заблокирован'] == 'да') {
+                disabled = true;
+              } else if (row['Заблокирован'] == 'нет') {
+                disabled = false;
+              }
+              if (row['Один раз для каждого клиента'] == 'да') {
+                actclient = true;
+              } else if (row['Один раз для каждого клиента'] == 'нет') {
+                actclient = false;
+              }
+              if (_.isNumber(row['Минимальная сумма заказа'])) {
+                minprice = parseFloat(row['Минимальная сумма заказа'].replace(",",".")).toFixed(2);
               } else {
-                if (_.isUndefined(coupon[0])) {
-                  log('пусто');
+                minprice = null;
+              }
+              if (_.isUndefined(coupon[0])) {
+                jobs.create('create', {
+                  id: job.data.id,
+                  taskid: job.data.taskid,
+                  type: 2,
+                  coupon: row['Код купона'],
+                  desc: row['Описание'],
+                  act: act,
+                  actclient: actclient,
+                  minprice: minprice,
+                  discount: row['Величина скидки'].toFixed(2),
+                  typediscount: type_discount,
+                  until: row['Действителен по'],
+                  disabled: disabled
+                }).delay(600).priority('normal').save();
+                callback();
+              } else {
+                var objectDB = {
+                  id: job.data.id,
+                  taskid: job.data.taskid,
+                  guid: coupon[0].guid,
+                  type: 2,
+                  coupon: coupon[0].code,
+                  act: coupon[0].act,
+                  actclient: coupon[0].actclient,
+                  minprice: coupon[0].minprice,
+                  discount: parseFloat(coupon[0].discount).toFixed(2),
+                  typediscount: coupon[0].typeid,
+                  until: moment(coupon[0].expired_at)
+                         .format('DD-MM-YYYY'),
+                  disabled: coupon[0].disabled
+                };
+                var objectXLSX = {
+                  id: job.data.id,
+                  taskid: job.data.taskid,
+                  guid: coupon[0].guid,
+                  type: 2,
+                  coupon: row['Код купона'],
+                  act: act,
+                  actclient: actclient,
+                  minprice: minprice,
+                  discount: parseFloat(row['Величина скидки']).toFixed(2),
+                  typediscount: type_discount,
+                  until: row['Действителен по'],
+                  disabled: disabled
+                };
+                if (!_.isEqual(objectDB, objectXLSX)) {
+                  log(row['Код купона'] + ' изменён');
+                  log(objectDB);
+                  log(objectXLSX);
+                  jobs.create('update', objectXLSX).delay(600).priority('normal').save();
+                  callback();
                 } else {
-                  var type_discount = '';
-                  var minprice = ' ';
-                  var act = '';
-                  var actclient = '';
-                  var disabled = '';
-                  if (sheet[i]['Тип скидки'] == 'процент') {
-                    type_discount = 1;
-                  } else if (sheet[i]['Тип скидки'] == 'денежная величина') {
-                    type_discount = 0;
-                  }
-                  if (sheet[i]['Тип купона'] == 'одноразовый') {
-                    act = 1;
-                  } else if (sheet[i]['Тип купона'] == 'многоразовый') {
-                    act = 0;
-                  }
-                  if (sheet[i]['Заблокирован'] == 'да') {
-                    disabled = 1;
-                  } else if (sheet[i]['Заблокирован'] == 'нет') {
-                    disabled = 0;
-                  }
-                  if (sheet[i]['Использовать только один\nраз для каждого клиента'] == 'да') {
-                    actclient = 1;
-                  } else if (sheet[i]['Использовать только один\nраз для каждого клиента'] == 'нет') {
-                    actclient = 0;
-                  }
-                  if (sheet[i]['Код купона'] == coupon[0].code) {
-                    jobs.create('update', {
-                      id: job.data.id,
-                      taskid: job.data.taskid,
-                      type: 2,
-                      coupon: sheet[i]['Код купона'],
-                      act: act,
-                      discount: sheet[i]['Величина скидки'],
-                      typediscount: type_discount,
-                      until: sheet[i]['Действителен по']
-                    }).delay(600).priority('normal').save();
-                  } else if (sheet[i]['Тип купона'] == '') {
-
-                  }
-                  log(coupon[0].code);
+                  log('Купон такой же');
+                  callback();
                 }
               }
-            });
-          }
+            }
+          });
         }
+      } else {
+        callback();
       }
-    }
+    }, function(e) {
+         if (e) {
+           log('A coupons failed to process');
+           Queue.createJobParseXLSX(job);
+         } else {
+           log('All coupons have been processed successfully');
+           Queue.createJobCloseTask(job.data.taskid);
+         }
+       });
   },
 
   updateCoupon: function(job, done) {
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
+        var desc = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
+        var disb = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
+        var minprice = (_.isUndefined(job.data.minprice) || (job.data.minprice == 0) || (_.isNull(job.data.minprice))) ? '' : '<min-price>' + job.data.minprice + '</min-price>';
+        var actclient = (_.isUndefined(job.data.actclient) || (job.data.actclient == '')) ? '<act_once_for_client>0</act_once_for_client>' : '<act_once_for_client>1</act_once_for_client>';
         var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
                    + '<discount_code>'
                    + '<code>' + job.data.coupon + '</code>'
                    + '<act_once>' + job.data.act + '</act_once>'
+                   + minprice
+                   + actclient
                    + '<discount>' + job.data.discount + '</discount>'
                    + '<type_id>' + job.data.typediscount + '</type_id>'
-                   + '<description>генератор купонов</description>'
-                   + '<disabled>0</disabled>'
+                   + '<description>' + desc + '</description>'
+                   + '<disabled>' + disb + '</disabled>'
                    + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
                                       .format('YYYY-MM-DD') + '</expired-at>'
                    + '</discount_code>';
         rest.put('http://' + process.env.insalesid + ':'
-                 + app.token + '@'
-                 + app.insalesurl
-                 + '/admin/discount_codes/'
-                 + '.xml', {
-                   data: coupon,
-                   headers: {'Content-Type': 'application/xml'}
-                 }).once('complete', function(o) {
+                + app.token + '@'
+                + app.insalesurl
+                + '/admin/discount_codes/'
+                + job.data.guid
+                + '.xml', {
+                  data: coupon,
+                  headers: {'Content-Type': 'application/xml'}
+                }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Error:', o.message);
             this.retry(5000);
@@ -1461,29 +1514,31 @@ var Queue = {
               done();
             } else {
               log(o);
-              var coupon = new Coupons({
-                insalesid           : job.data.id,
-                guid                : o['discount-code']['id'],
-                code                : o['discount-code']['code'],
-                description         : o['discount-code']['description'],
-                act                 : o['discount-code']['act-once'],
-                actclient           : o['discount-code']['act-once-for-client'],
-                typeid              : o['discount-code']['type-id'],
-                discount            : o['discount-code']['discount'],
-                minprice            : o['discount-code']['min-price'],
-                worked              : o['discount-code']['worked'],
-                expired_at          : o['discount-code']['expired-at'],
-                created_at          : o['discount-code']['created-at'],
-                updated_at          : o['discount-code']['updated-at'],
-                disabled            : o['discount-code']['disabled']
-              });
-              coupon.save(function (err) {
+              Coupons.findOne({guid:job.data.guid}, function(err, coupon) {
                 if (err) {
-                  log('Ошибка');
                   log(err);
                 } else {
-                  log('Создан купон');
-                  done();
+                  coupon.code        = o['discount-code']['code'];
+                  coupon.description = o['discount-code']['description'];
+                  coupon.act         = o['discount-code']['act-once'];
+                  coupon.actclient   = o['discount-code']['act-once-for-client'];
+                  coupon.typeid      = o['discount-code']['type-id'];
+                  coupon.discount    = o['discount-code']['discount'];
+                  coupon.minprice    = o['discount-code']['min-price'];
+                  coupon.worked      = o['discount-code']['worked'];
+                  coupon.expired_at  = o['discount-code']['expired-at'];
+                  coupon.created_at  = o['discount-code']['created-at'];
+                  coupon.updated_at  = o['discount-code']['updated-at'];
+                  coupon.disabled    = o['discount-code']['disabled'];
+                  coupon.save(function (err) {
+                    if (err) {
+                      log('Ошибка');
+                      log(err);
+                    } else {
+                      log('Обновлён купон');
+                      done();
+                    }
+                  });
                 }
               });
             }
@@ -1679,7 +1734,7 @@ jobs.process('create', function(job, done) {
 
 jobs.process('close', function(job, done) {
   // создаём купоны
-  Queue.closeTask(job.data.taskid, done);
+  Queue.closeTask(job.data.taskid, job.data.message, done);
 });
 
 router.get('/install', function(req, res) {
