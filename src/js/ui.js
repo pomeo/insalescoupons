@@ -1,5 +1,7 @@
 $(document).ready(function() {
-  sample();
+  if ($("#coupons").length !== 0) {
+    sample();
+  }
   $.validator.addMethod('loginRegex', function(value, element) {
     return this.optional(element) || /^[a-zA-Zа-яА-Я0-9\-]+$/i.test(value);
   }, 'Только цифры, буквы и дефис');
@@ -95,7 +97,7 @@ $(document).ready(function() {
       $("#b-discount").prepend("<i class='uk-icon-rub'></i>");
     }
   });
-  if ($("#coupons")) {
+  if ($("#coupons").length !== 0) {
     var grid;
     var columns = [
       {id: "code", name: "Код купона", field: "code", sortable: true},
