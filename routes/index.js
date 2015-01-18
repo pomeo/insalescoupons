@@ -130,17 +130,32 @@ router.get('/zadaniya', function(req, res) {
           var tasksProcessing = [];
           async.each(tasks, function(task, callback) {
             if (task.status == 3) {
-              tasksDone.push({
-                'type'    : task.type,
-                'status'  : task.status,
-                'numbers' : task.numbers,
-                'variant' : task.variant,
-                'created' : moment(new Date(task.created_at))
-                            .format('DD/MM/YYYY HH:mm ZZ'),
-                'updated' : moment(new Date(task.updated_at))
-                            .format('DD/MM/YYYY HH:mm ZZ')
-              });
-              callback();
+              if (_.isUndefined(task.message)) {
+                tasksDone.push({
+                  'type'    : task.type,
+                  'status'  : task.status,
+                  'numbers' : task.numbers,
+                  'variant' : task.variant,
+                  'created' : moment(new Date(task.created_at))
+                              .format('DD/MM/YYYY HH:mm ZZ'),
+                  'updated' : moment(new Date(task.updated_at))
+                              .format('DD/MM/YYYY HH:mm ZZ')
+                });
+                callback();
+              } else {
+                tasksDone.push({
+                  'type'    : task.type,
+                  'status'  : task.status,
+                  'numbers' : task.numbers,
+                  'variant' : task.variant,
+                  'message' : task.message,
+                  'created' : moment(new Date(task.created_at))
+                              .format('DD/MM/YYYY HH:mm ZZ'),
+                  'updated' : moment(new Date(task.updated_at))
+                              .format('DD/MM/YYYY HH:mm ZZ')
+                });
+                callback();
+              }
             } else if (task.status == 2) {
               tasksProcessing.push({
                 'type'    : task.type,
@@ -169,6 +184,7 @@ router.get('/zadaniya', function(req, res) {
           }, function(err) {
                res.render('tasks', {
                  title      : '',
+                 _          : _,
                  tasks      : tasksList,
                  done       : tasksDone,
                  processing : tasksProcessing
