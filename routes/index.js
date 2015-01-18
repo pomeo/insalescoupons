@@ -102,7 +102,7 @@ router.get('/', function(req, res) {
                               + process.env.insalesid
                               + '/login?token='
                               + id
-                              + '&login=http://localhost');
+                              + '&login=https://coupons.salesapps.ru');
                 }
               });
             }
