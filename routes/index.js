@@ -492,18 +492,21 @@ router.post('/generate', function(req, res) {
              'coupon-parts': parseInt(req.param('c-part')),
              'coupon-part-lengths': parseInt(req.param('c-partlen')),
              'coupon-act': parseInt(req.param('act')),
+             'coupon-actclient': (_.isUndefined(req.param('actclient'))) ? 0 : 1,
+             'coupon-minprice': (req.param('minprice') == '') ? 0 : parseFloat(req.param('minprice').replace(",",".")).toFixed(2),
              'coupon-variants': parseInt(req.param('variants')),
              'coupon-type-discount': parseInt(req.param('typediscount')),
              'coupon-discount': parseFloat(req.param('discount').replace(",",".")).toFixed(2),
              'coupon-until': moment(req.param('until'), 'DD.MM.YYYY')
-                             .format('DD.MM.YYYY'),
-             'coupon-group': req.param('group')
+                             .format('DD.MM.YYYY')
            };
            var exist = {
              'coupon-number': -1,
              'coupon-parts': -1,
              'coupon-part-lengths': -1,
              'coupon-act': -1,
+             'coupon-actclient': -1,
+             'coupon-minprice': -1,
              'coupon-variants': -1,
              'coupon-type-discount': -1,
              'coupon-discount': -1,
@@ -565,6 +568,8 @@ router.post('/generate', function(req, res) {
                            parts: form['coupon-parts'],
                            length: form['coupon-part-lengths'],
                            act: form['coupon-act'],
+                           actclient: form['coupon-actclient'],
+                           minprice: form['coupon-minprice'],
                            variant: form['coupon-variants'],
                            typediscount: form['coupon-type-discount'],
                            discount: form['coupon-discount'],
@@ -715,6 +720,8 @@ setInterval(function() {
                      parts: null,
                      length: null,
                      act: null,
+                     actclient: null,
+                     minprice: null,
                      variant: null,
                      typediscount: null,
                      discount: null,
@@ -733,6 +740,8 @@ setInterval(function() {
                      parts: null,
                      length: null,
                      act: null,
+                     actclient: null,
+                     minprice: null,
                      variant: task.variant,
                      typediscount: null,
                      discount: null,
@@ -751,6 +760,8 @@ setInterval(function() {
                      parts: null,
                      length: null,
                      act: null,
+                     actclient: null,
+                     minprice: null,
                      variant: null,
                      typediscount: null,
                      discount: null,
@@ -769,6 +780,8 @@ setInterval(function() {
                      parts: task.parts,
                      length: task.length,
                      act: task.act,
+                     actclient: task.actclient,
+                     minprice: task.minprice,
                      variant: task.variant,
                      typediscount: task.typediscount,
                      discount: task.discount,
@@ -808,6 +821,8 @@ var Queue = {
       parts: job.data.parts,
       length: job.data.length,
       act: job.data.act,
+      actclient: job.data.actclient,
+      minprice: job.data.minprice,
       variant: job.data.variant,
       typediscount: job.data.typediscount,
       discount: job.data.discount,
@@ -841,6 +856,8 @@ var Queue = {
       parts: job.data.parts,
       length: job.data.length,
       act: job.data.act,
+      actclient: job.data.actclient,
+      minprice: job.data.minprice,
       variant: job.data.variant,
       typediscount: job.data.typediscount,
       discount: job.data.discount,
@@ -877,6 +894,8 @@ var Queue = {
       parts: job.data.parts,
       length: job.data.length,
       act: job.data.act,
+      actclient: job.data.actclient,
+      minprice: job.data.minprice,
       variant: job.data.variant,
       typediscount: job.data.typediscount,
       discount: job.data.discount,
@@ -980,6 +999,8 @@ var Queue = {
       parts: job.data.parts,
       length: job.data.length,
       act: job.data.act,
+      actclient: job.data.actclient,
+      minprice: job.data.minprice,
       variant: job.data.variant,
       typediscount: job.data.typediscount,
       discount: job.data.discount,
@@ -1223,11 +1244,12 @@ var Queue = {
           parts: job.data.parts,
           length: job.data.length,
           act: job.data.act,
+          actclient: job.data.actclient,
+          minprice: job.data.minprice,
           variant: job.data.variant,
           typediscount: job.data.typediscount,
           discount: job.data.discount,
-          until: job.data.until,
-          group: job.data.group
+          until: job.data.until
         }).delay(600).priority('normal').save();
         callback();
       }, function(e) {
@@ -1243,11 +1265,12 @@ var Queue = {
                parts: job.data.parts,
                length: job.data.length,
                act: job.data.act,
+               actclient: job.data.actclient,
+               minprice: job.data.minprice,
                variant: job.data.variant,
                typediscount: job.data.typediscount,
                discount: job.data.discount,
-               until: job.data.until,
-               group: job.data.group
+               until: job.data.until
              }).delay(600).priority('normal').save();
            }
          });
@@ -1484,6 +1507,8 @@ var Queue = {
           type: 2,
           coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
           act: job.data.act,
+          actclient: job.data.actclient,
+          minprice: job.data.minprice,
           discount: job.data.discount,
           typediscount: job.data.typediscount,
           until: job.data.until
@@ -1501,17 +1526,24 @@ var Queue = {
   createCoupons: function(job, done) {
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
+        var desc = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
+        var disb = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
+        var minprice = (_.isUndefined(job.data.minprice) || (job.data.minprice == 0) || (_.isNull(job.data.minprice))) ? '' : '<min-price>' + job.data.minprice + '</min-price>';
+        var actclient = (_.isUndefined(job.data.actclient) || (job.data.actclient == '')) ? '<act_once_for_client>0</act_once_for_client>' : '<act_once_for_client>1</act_once_for_client>';
         var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
                    + '<discount_code>'
                    + '<code>' + job.data.coupon + '</code>'
                    + '<act_once>' + job.data.act + '</act_once>'
+                   + minprice
+                   + actclient
                    + '<discount>' + job.data.discount + '</discount>'
                    + '<type_id>' + job.data.typediscount + '</type_id>'
-                   + '<description>генератор купонов</description>'
-                   + '<disabled>0</disabled>'
+                   + '<description>' + desc + '</description>'
+                   + '<disabled>' + disb + '</disabled>'
                    + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
                                       .format('YYYY-MM-DD') + '</expired-at>'
                    + '</discount_code>';
+        log(coupon);
         rest.post('http://' + process.env.insalesid + ':'
                  + app.token + '@'
                  + app.insalesurl
@@ -1779,11 +1811,12 @@ TasksSchema.add({
   path         : String, // путь до файла во время импорта
   status       : Number, // статус задания
   message      : String, // сообщение об ошибке
-  groupid      : { type: String, index: true }, // id группы в цепочке заданий
   numbers      : Number, // количество купонов
   parts        : Number, // количество частей купона
   length       : Number, // длина части купона
   act          : Number, // одно или много-разовый купон
+  actclient    : Number, // использовать один раз для зарегистрированного
+  minprice     : Number, // минимальная сумма заказа
   variant      : Number, // варианты развития задания
   typediscount : Number, // процент или денежная единица
   discount     : String, // величина скидки
