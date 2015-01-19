@@ -68,7 +68,7 @@ router.get('/', function(req, res) {
               var sett = {};
               async.each(settings, function(s, callback) {
                 sett[s.property] = s.value;
-                callback();
+                setImmediate(callback);
               }, function(e) {
                    if (e) {
                      log('Ошибка во время работы async. Вывод свойств формы генерации в шаблон', 'error');
@@ -141,7 +141,7 @@ router.get('/zadaniya', function(req, res) {
                   'updated' : moment(new Date(task.updated_at))
                               .format('DD/MM/YYYY HH:mm ZZ')
                 });
-                callback();
+                setImmediate(callback);
               } else {
                 tasksDone.push({
                   'type'    : task.type,
@@ -154,7 +154,7 @@ router.get('/zadaniya', function(req, res) {
                   'updated' : moment(new Date(task.updated_at))
                               .format('DD/MM/YYYY HH:mm ZZ')
                 });
-                callback();
+                setImmediate(callback);
               }
             } else if (task.status == 2) {
               tasksProcessing.push({
@@ -167,7 +167,7 @@ router.get('/zadaniya', function(req, res) {
                 'updated' : moment(new Date(task.updated_at))
                             .format('DD/MM/YYYY HH:mm ZZ')
               });
-              callback();
+              setImmediate(callback);
             } else {
               tasksList.push({
                 'type'    : task.type,
@@ -179,7 +179,7 @@ router.get('/zadaniya', function(req, res) {
                 'updated' : moment(new Date(task.updated_at))
                             .format('DD/MM/YYYY HH:mm ZZ')
               });
-              callback();
+              setImmediate(callback);
             }
           }, function(err) {
                res.render('tasks', {
@@ -528,11 +528,11 @@ router.post('/generate', function(req, res) {
                       if (err) {
                         log('Ошибка сохранения', 'error');
                         log(err, 'error');
-                        callback();
+                        setImmediate(callback);
                       } else {
                         exist[s.property] = 1;
                         log('Ok');
-                        callback();
+                        setImmediate(callback);
                       }
                     });
                   }, function(e) {
@@ -645,7 +645,7 @@ router.get('/data', function(req, res) {
           insalesid: req.session.insalesid
         }, function(err, coupons) {
              var i = 0;
-             async.eachSeries(coupons, function(coup, callback) {
+             async.each(coupons, function(coup, callback) {
                var type_discount = ((coup.typeid == 1) ? ' %' : ' руб');
                var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
                var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
@@ -670,11 +670,11 @@ router.get('/data', function(req, res) {
                  worked: worked
                };
                i++;
-               callback();
+               setImmediate(callback);
              }, function(e) {
                   if (e) {
                     log('Ошибка');
-                    res.sendStatus(200)
+                    res.sendStatus(200);
                   } else {
                     res.json(data);
                   }
@@ -837,11 +837,11 @@ var Queue = {
         log('Ошибка', 'error');
         log(err);
         Queue.createJobDeleteCouponsFromApp(job);
-        done();
+        setImmediate(done);
       } else {
         log('Удалены купоны из базы приложения');
         Queue.createJobDeleteCollectionsFromApp(job);
-        done();
+        setImmediate(done);
       }
     });
   },
@@ -872,16 +872,16 @@ var Queue = {
         log('Ошибка', 'error');
         log(err);
         Queue.createJobDeleteCollectionsFromApp(job);
-        done();
+        setImmediate(done);
       } else {
         log('Удалены категории из базы приложения');
         Queue.createJobGetCollections(job);
-        done();
+        setImmediate(done);
       }
     });
   },
 
-  createJobGetCollections: function(job, done) {
+  createJobGetCollections: function(job) {
     var p = (job.data.page === undefined) ? 1 : job.data.page;
     log('Задание на получение категорий');
     jobs.create('getCollections', {
@@ -921,7 +921,7 @@ var Queue = {
           } else {
             if (o.errors) {
               log('Ошибка');
-              done();
+              setImmediate(done);
             } else {
               log('Заходим в функцию дёрганья категорий');
               if (_.isUndefined(o['collections']['collection'][0])) {
@@ -938,10 +938,11 @@ var Queue = {
                   if (err) {
                     log('Ошибка');
                     log(err);
+                    setImmediate(done);
                   } else {
                     log('Сохранёна категория из магазина в базу приложения');
                     Queue.createJobGetCoupons(job);
-                    done();
+                    setImmediate(done);
                   }
                 });
               } else {
@@ -958,21 +959,21 @@ var Queue = {
                     if (err) {
                       log('Ошибка');
                       log(err);
-                      callback();
+                      setImmediate(callback);
                     } else {
                       log('Сохранена категория из магазина в базу приложения');
-                      callback();
+                      setImmediate(callback);
                     }
                   });
                 }, function(e) {
                      if (e) {
                        log('A collections failed to process');
                        Queue.createJobGetCollections(job);
-                       done();
+                       setImmediate(done);
                      } else {
                        log('All collections');
                        Queue.createJobGetCoupons(job);
-                       done();
+                       setImmediate(done);
                      }
                    });
               }
@@ -981,7 +982,7 @@ var Queue = {
         });
       } else {
         log('Приложение не установлено для данного магазина');
-        done();
+        setImmediate(done);
       }
     });
   },
@@ -1030,7 +1031,7 @@ var Queue = {
           } else {
             if (o.errors) {
               log('Ошибка');
-              done();
+              setImmediate(done);
             } else {
               log('Заходим в функцию дёрганья купонов');
               if (typeof o['discount-codes'] === 'undefined') {
@@ -1038,17 +1039,17 @@ var Queue = {
                     (job.data.variant === 3) ||
                     (job.data.variant === 4)) {
                   Queue.createJobDeleteCoupons(job);
-                  done();
+                  setImmediate(done);
                 } else if (job.data.variant === 2) {
                   Queue.createJobCreateCoupons(job);
-                  done();
+                  setImmediate(done);
                 } else if (job.data.type === 7) {
                   Queue.createJobParseXLSX(job);
-                  done();
+                  setImmediate(done);
                 } else {
                   log('Конец');
                   Queue.createJobCloseTask(job.data.taskid);
-                  done();
+                  setImmediate(done);
                 }
               } else {
                 if (_.isUndefined(o['discount-codes']['discount-code'][0])) {
@@ -1061,6 +1062,7 @@ var Queue = {
                       C.exec(function(err, collec) {
                         if (err) {
                           log(err);
+                          setImmediate(done);
                         } else {
                           for (var i = 0, len = collec.length; i < len; i++) {
                             arr.push(collec[i].name);
@@ -1087,11 +1089,12 @@ var Queue = {
                             if (err) {
                               log('Ошибка');
                               log(err);
+                              setImmediate(done);
                             } else {
                               log('Сохранён купон из магазина в базу приложения');
                               job.data.page++;
                               Queue.createJobGetCoupons(job);
-                              done();
+                              setImmediate(done);
                             }
                           });
                         }
@@ -1119,15 +1122,17 @@ var Queue = {
                       if (err) {
                         log('Ошибка');
                         log(err);
+                        setImmediate(done);
                       } else {
                         log('Сохранён купон из магазина в базу приложения');
                         job.data.page++;
                         Queue.createJobGetCoupons(job);
-                        done();
+                        setImmediate(done);
                       }
                     });
                   }
                 } else {
+                  log('Здесь');
                   async.each(o['discount-codes']['discount-code'], function(coup, callback) {
                     var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id');
                     if (!_.isEmpty(collection)) {
@@ -1137,7 +1142,7 @@ var Queue = {
                       C.exec(function(err, collec) {
                         if (err) {
                           log(err);
-                          callback();
+                          setImmediate(callback);
                         } else {
                           for (var i = 0, len = collec.length; i < len; i++) {
                             arr.push(collec[i].name);
@@ -1164,10 +1169,10 @@ var Queue = {
                             if (err) {
                               log('Ошибка');
                               log(err);
-                              callback();
+                              setImmediate(callback);
                             } else {
                               log('Сохранён купон из магазина в базу приложения');
-                              callback();
+                              setImmediate(callback);
                             }
                           });
                         }
@@ -1195,10 +1200,10 @@ var Queue = {
                         if (err) {
                           log('Ошибка');
                           log(err);
-                          callback();
+                          setImmediate(callback);
                         } else {
                           log('Сохранён купон из магазина в базу приложения');
-                          callback();
+                          setImmediate(callback);
                         }
                       });
                     }
@@ -1206,12 +1211,12 @@ var Queue = {
                        if (e) {
                          log('A coupons failed to process');
                          Queue.createJobGetCoupons(job);
-                         done();
+                         setImmediate(done);
                        } else {
                          log('All coupons have been processed successfully ' + job.data.page);
                          job.data.page++;
                          Queue.createJobGetCoupons(job);
-                         done();
+                         setImmediate(done);
                        }
                      });
                 }
@@ -1221,7 +1226,7 @@ var Queue = {
         });
       } else {
         log('Приложение не установлено для данного магазина');
-        done();
+        setImmediate(done);
       }
     });
   },
@@ -1251,7 +1256,7 @@ var Queue = {
           discount: job.data.discount,
           until: job.data.until
         }).delay(600).priority('normal').save();
-        callback();
+        setImmediate(callback);
       }, function(e) {
            if (e) {
              log('Ошибка');
@@ -1297,10 +1302,10 @@ var Queue = {
               }, function (err, r){
                    if (err) {
                      log('Ошибка');
-                     done();
+                     setImmediate(done);
                    } else {
                      log('Удалён купон из магазина и базы приложения');
-                     done();
+                     setImmediate(done);
                    }
                  });
             }
@@ -1310,17 +1315,17 @@ var Queue = {
             }, function (err, r){
                  if (err) {
                    log('Ошибка');
-                   done();
+                   setImmediate(done);
                  } else {
                    log('Удалён купон из магазина и базы приложения');
-                   done();
+                   setImmediate(done);
                  }
                });
           }
         });
       } else {
         log('Приложение не установлено для данного магазина');
-        done();
+        setImmediate(done);
       }
     });
   },
@@ -1337,39 +1342,39 @@ var Queue = {
           var message = 'Ошибка в ячейке A' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else if (_.isUndefined(row['Тип купона'])) {
           var message = 'Ошибка в ячейке B' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else if (_.isUndefined(row['Тип скидки'])) {
           var message = 'Ошибка в ячейке C' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else if (_.isUndefined(row['Величина скидки'])) {
           var message = 'Ошибка в ячейке D' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else if (_.isUndefined(row['Один раз для каждого клиента'])) {
           var message = 'Ошибка в ячейке H' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else if (_.isUndefined(row['Заблокирован'])) {
           var message = 'Ошибка в ячейке J' + iter;
           error = 1;
           Queue.createJobCloseTask(job.data.taskid, message);
-          callback();
+          setImmediate(callback);
         } else {
           var C = Coupons.find({insalesid:job.data.id});
           C.find({code:row['Код купона']});
           C.exec(function(err, coupon) {
             if (err) {
               log(err);
-              callback();
+              setImmediate(callback);
             } else {
               var type_discount = '';
               var minprice = '';
@@ -1416,7 +1421,7 @@ var Queue = {
                   until: row['Действителен по'],
                   disabled: disabled
                 }).delay(600).priority('normal').save();
-                callback();
+                setImmediate(callback);
               } else {
                 var objectDB = {
                   id: job.data.id,
@@ -1452,17 +1457,17 @@ var Queue = {
                   log(objectDB);
                   log(objectXLSX);
                   jobs.create('update', objectXLSX).delay(600).priority('normal').save();
-                  callback();
+                  setImmediate(callback);
                 } else {
                   log('Купон такой же');
-                  callback();
+                  setImmediate(callback);
                 }
               }
             }
           });
         }
       } else {
-        callback();
+        setImmediate(callback);
       }
     }, function(e) {
          if (e) {
@@ -1511,12 +1516,13 @@ var Queue = {
             if (o.errors) {
               log('Ошибка');
               log(o);
-              done();
+              setImmediate(done);
             } else {
               log(o);
               Coupons.findOne({guid:job.data.guid}, function(err, coupon) {
                 if (err) {
                   log(err);
+                  setImmediate(done);
                 } else {
                   coupon.code        = o['discount-code']['code'];
                   coupon.description = o['discount-code']['description'];
@@ -1534,9 +1540,10 @@ var Queue = {
                     if (err) {
                       log('Ошибка');
                       log(err);
+                      setImmediate(done);
                     } else {
                       log('Обновлён купон');
-                      done();
+                      setImmediate(done);
                     }
                   });
                 }
@@ -1546,6 +1553,7 @@ var Queue = {
         });
       } else {
         log('Приложение не установлено для данного магазина');
+        setImmediate(done);
       }
     });
   },
@@ -1568,7 +1576,7 @@ var Queue = {
           typediscount: job.data.typediscount,
           until: job.data.until
         }).delay(600).priority('normal').save();
-        callback();
+        setImmediate(callback);
       },
       function(err) {
         jobs.create('create', {
@@ -1598,7 +1606,6 @@ var Queue = {
                    + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
                                       .format('YYYY-MM-DD') + '</expired-at>'
                    + '</discount_code>';
-        log(coupon);
         rest.post('http://' + process.env.insalesid + ':'
                  + app.token + '@'
                  + app.insalesurl
@@ -1613,8 +1620,9 @@ var Queue = {
             if (o.errors) {
               log('Ошибка');
               log(o);
-              done();
+              setImmediate(done);
             } else {
+              log(job.data);
               log(o);
               var coupon = new Coupons({
                 insalesid           : job.data.id,
@@ -1636,9 +1644,10 @@ var Queue = {
                 if (err) {
                   log('Ошибка');
                   log(err);
+                  setImmediate(done);
                 } else {
                   log('Создан купон');
-                  done();
+                  setImmediate(done);
                 }
               });
             }
@@ -1646,6 +1655,7 @@ var Queue = {
         });
       } else {
         log('Приложение не установлено для данного магазина');
+        setImmediate(done);
       }
     });
   },
@@ -1677,10 +1687,10 @@ var Queue = {
         if (err) {
           log(err);
           Queue.createJobCloseTask(taskid, message);
-          done();
+          setImmediate(done);
         } else {
           log('Done');
-          done();
+          setImmediate(done);
         }
       });
     })
@@ -1707,10 +1717,10 @@ jobs.process('deleteInsales', function(job, done) {
   if (job.data.couponid === undefined) {
     if (job.data.type == 6) {
       Queue.createJobCloseTask(job.data.taskid);
-      done();
+      setImmediate(done);
     } else {
       Queue.createJobCreateCoupons(job);
-      done();
+      setImmediate(done);
     }
   } else {
     Queue.deleteCoupons(job, done);
@@ -1726,7 +1736,7 @@ jobs.process('create', function(job, done) {
   // создаём купоны
   if (job.data.id === undefined) {
     Queue.createJobCloseTask(job.data.taskid);
-    done();
+    setImmediate(done);
   } else {
     Queue.createCoupons(job, done);
   }
