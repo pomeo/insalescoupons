@@ -354,56 +354,6 @@ function rowStyle(wb, odd, middle, header) {
   return row;
 }
 
-function createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, rowOddStyleMiddle) {
-  var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
-  var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
-  var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
-  var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
-  var expired = moment(new Date(coup.expired_at))
-                .format('DD-MM-YYYY');
-  var worked = ' ';
-  if ((coup.disabled == 0) && (coup.worked == 0)) {
-    worked = 'да';
-  } else if ((coup.disabled == 0) && (coup.worked == 1)) {
-    worked = 'нет';
-  }
-  var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
-  ws.Row(i).Height(20);
-  ws.Cell(i,1)
-  .String(coup.code)
-  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-  ws.Cell(i,2)
-  .String(act)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,3)
-  .String(type_discount)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,4)
-  .Number(coup.discount)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,5)
-  .String(coup.description)
-  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-  ws.Cell(i,6)
-  .String(coup.discountcollections)
-  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-  ws.Cell(i,7)
-  .String(minprice)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,8)
-  .String(actclient)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,9)
-  .String(expired)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,10)
-  .String(disabled)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-  ws.Cell(i,11)
-  .String(worked)
-  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-}
-
 router.get('/export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
@@ -441,20 +391,76 @@ router.get('/export', function(req, res) {
         Coupons.find({
           insalesid: req.session.insalesid
         }, function(err, coupons) {
-             var i = 2;
-             async.eachSeries(coupons, function(coup, callback) {
-               createXLSX(ws, i, coup, rowEvenStyle, rowOddStyle, rowEvenStyleMiddle, rowOddStyleMiddle);
-               i++;
-               callback();
-             }, function(e) {
-                  if (e) {
-                    log('Ошибка');
-                    res.sendStatus(200)
-                  } else {
-                    log('Отдаём xlsx файл');
-                    wb.write('coupons.xlsx', res);
-                  }
-                });
+             if (_.isEmpty(coupons)) {
+               res.sendStatus(200);
+             } else {
+               var i = 2;
+               async.each(coupons, function(coup, callback) {
+                 var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
+                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
+                 var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
+                 var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
+                 var expired = moment(new Date(coup.expired_at))
+                               .format('DD-MM-YYYY');
+                 var worked = ' ';
+                 if ((coup.disabled == 0) && (coup.worked == 0)) {
+                   worked = 'да';
+                 } else if ((coup.disabled == 0) && (coup.worked == 1)) {
+                   worked = 'нет';
+                 }
+                 var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
+                 ws.Row(i).Height(20);
+                 ws.Cell(i,1)
+                 .String(coup.code)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,2)
+                 .String(act)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,3)
+                 .String(type_discount)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,4)
+                 .Number(coup.discount)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,5)
+                 .String(coup.description)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,6)
+                 .String(coup.discountcollections)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,7)
+                 .String(minprice)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,8)
+                 .String(actclient)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,9)
+                 .String(expired)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,10)
+                 .String(disabled)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,11)
+                 .String(worked)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 i++;
+                 setImmediate(callback);
+               }, function(e) {
+                    if (e) {
+                      log('Ошибка');
+                      res.sendStatus(200)
+                    } else {
+                      log('Отдаём xlsx файл');
+                      wb.write(__dirname + '/../public/coupons.xlsx', function(err) {
+                        if (err) {
+                          log('ошибка');
+                        } else {
+                          res.sendStatus(200);
+                        }
+                      });
+                    }
+                  });
+             }
            });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
