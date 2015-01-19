@@ -494,16 +494,16 @@ router.post('/generate', function(req, res) {
     }, function(err, app) {
          if (app.enabled == true) {
            var form = {
-             'coupon-number': parseInt(req.param('c-num')),
-             'coupon-parts': parseInt(req.param('c-part')),
-             'coupon-part-lengths': parseInt(req.param('c-partlen')),
-             'coupon-act': parseInt(req.param('act')),
-             'coupon-actclient': (_.isUndefined(req.param('actclient'))) ? 0 : 1,
-             'coupon-minprice': (req.param('minprice') == '') ? 0 : parseFloat(req.param('minprice').replace(",",".")).toFixed(2),
-             'coupon-variants': parseInt(req.param('variants')),
-             'coupon-type-discount': parseInt(req.param('typediscount')),
-             'coupon-discount': parseFloat(req.param('discount').replace(",",".")).toFixed(2),
-             'coupon-until': moment(req.param('until'), 'DD.MM.YYYY')
+             'coupon-number': parseInt(req.body['c-num']),
+             'coupon-parts': parseInt(req.body['c-part']),
+             'coupon-part-lengths': parseInt(req.body['c-partlen']),
+             'coupon-act': parseInt(req.body['act']),
+             'coupon-actclient': (_.isUndefined(req.body['actclient'])) ? 0 : 1,
+             'coupon-minprice': (req.body['minprice'] == '') ? 0 : parseFloat(req.body['minprice'].replace(",",".")).toFixed(2),
+             'coupon-variants': parseInt(req.body['variants']),
+             'coupon-type-discount': parseInt(req.body['typediscount']),
+             'coupon-discount': parseFloat(req.body['discount'].replace(",",".")).toFixed(2),
+             'coupon-until': moment(req.body['until'], 'DD.MM.YYYY')
                              .format('DD.MM.YYYY')
            };
            var exist = {
@@ -612,8 +612,8 @@ router.get('/sample', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid:req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        var p = parseInt(req.param('parts'));
-        var l = parseInt(req.param('length'));
+        var p = parseInt(req.query.parts);
+        var l = parseInt(req.query.length);
         if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
           res.json(cc.generate({ parts: p, partLen: l }));
         } else {
@@ -1628,8 +1628,8 @@ var Queue = {
               log(o);
               setImmediate(done);
             } else {
-              log(job.data);
               log(o);
+              log(_.isEmpty(o));
               var coupon = new Coupons({
                 insalesid           : job.data.id,
                 guid                : o['discount-code']['id'],
