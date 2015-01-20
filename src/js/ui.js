@@ -117,12 +117,22 @@ $(document).ready(function() {
     };
 
     var loadingIndicator = null;
+    if (!loadingIndicator) {
+      loadingIndicator = $("<span class='loading-indicator'><img src='/img/tail-spin.svg' />Загрузка купонов</span>").appendTo(document.body);
+      var $g = $("#coupons");
+      loadingIndicator
+      .css("display", "none")
+      .css("position", "absolute")
+      .css("top", $g.position().top + $g.height() / 2 - loadingIndicator.height() / 2)
+      .css("left", $g.position().left + $g.width() / 2 - loadingIndicator.width() / 2);
+    }
+    loadingIndicator.fadeIn();
 
     $.ajax({
       url: '/data',
       dataType: "json",
       error: function (jqXHR, textStatus, errorThrown) {
-        console.log(jqXHR);
+        loadingIndicator.html("<span class='loading-indicator'>Ошибка загрузки купонов<br />попробуйте обновить страницу</span>");
       },
       success: function(data) {
         $("#b-coupon-sum").html(data.length);
@@ -138,6 +148,11 @@ $(document).ready(function() {
           }
         }
         grid = new Slick.Grid("#coupons", data, columns, options);
+        if (data.length == 0) {
+          loadingIndicator.html("<span class='loading-indicator'>Купоны отсутствуют<br />в базе приложения</span>");
+        } else {
+          loadingIndicator.fadeOut();
+        }
         grid.onSort.subscribe(function (e, args) {
           var cols = args.sortCols;
           data.sort(function (dataRow1, dataRow2) {
