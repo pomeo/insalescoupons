@@ -22,22 +22,26 @@ html.uk-height-1-1
     script(src='/js/slick.dataview.js')
     script(src='/js/slick.grid.js')
     script(src='/js/ui.js')
+    script(async='true', src='//assets.zendesk.com/external/zenbox/v2.6/zenbox.js')
   body.uk-height-1-1
     block content
-    script(type="text/javascript", src="//assets.zendesk.com/external/zenbox/v2.6/zenbox.js")
-    style(type="text/css", media="screen, projection")
-     | @import url(//assets.zendesk.com/external/zenbox/v2.6/zenbox.css);
     script(type="text/javascript")
-     | if (typeof(Zenbox) !== "undefined") {
-     |   Zenbox.init({
-     |     dropboxID:   "20299322",
-     |     url:         "https://salesapps.zendesk.com",
-     |     tabTooltip:  "Поддержка",
-     |     tabImageURL: "https://p3.zdassets.com/external/zenbox/images/tab_ru_support.png",
-     |     tabColor:    "black",
-     |     tabPosition: "Left"
-     |   });
-     | }
+     | var once = true;
+     | setInterval(function() {
+     |   if (once) {
+     |     if (typeof(Zenbox) !== "undefined") {
+     |       Zenbox.init({
+     |         dropboxID:   "20299322",
+     |         url:         "https://salesapps.zendesk.com",
+     |         tabTooltip:  "Поддержка",
+     |         tabImageURL: "https://p3.zdassets.com/external/zenbox/images/tab_ru_support.png",
+     |         tabColor:    "black",
+     |         tabPosition: "Left"
+     |       });
+     |       once = false;
+     |     }
+     |   }
+     | }, 3000);
     script(type="text/javascript")
      | (function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter27524292 = new Ya.Metrika({ id:27524292, webvisor:true, trackHash:true }); } catch(e) { } }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); } })(document, window, "yandex_metrika_callbacks");
     noscript
