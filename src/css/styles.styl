@@ -39,7 +39,7 @@
   width 500px
   padding 0px 10px
 .b-header
-  min-width 915px
+  width 750px
 .b-main
   width 600px
 #c-num, #c-part, #c-partlen
@@ -380,3 +380,67 @@ input.editor-checkbox
   z-index 10
   position absolute
   border 2px dashed black
+#zenbox_tab
+  border solid 1px
+  cursor pointer
+  position fixed
+  top 23%
+  z-index 10000
+.ZenboxTabLeft
+  left 0
+  background-position right 0
+.ZenboxTabRight
+  right 0
+  background-position left 0
+#zenbox_tab:hover
+  background-color #444
+#zenbox_tab img
+  display block
+#zenbox_overlay
+  height 100%
+  left 0
+  position absolute
+  top 0
+  width 100%
+  z-index 90000
+#zenbox_overlay *
+  color #333
+  font-family Arial, Helvetica, sans-serif
+  font-style normal
+  font-variant normal
+  font-size 12px
+  margin 0
+  padding 0
+#zenbox_container
+  height 620px
+  margin 0 auto
+  position relative
+  text-align left
+  width 638px
+  z-index 2
+#zenbox_container .zenbox_header
+  position relative
+  text-align right
+  width auto
+  z-index 100
+#zenbox_close
+  cursor pointer
+  height 46px
+  position relative
+  top 10px
+  width 46px
+#zenbox_body
+  height 900px
+  margin-top -18px
+  position relative
+  width 615px
+#zenbox_scrim
+  background-color #000
+  filter unquote("alpha(opacity=42)")
+  -moz-opacity: 0.42
+  left 0
+  position absolute
+  opacity 0.42
+  top 0
+  width 100%
+  z-index 1
