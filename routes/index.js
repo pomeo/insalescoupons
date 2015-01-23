@@ -14,6 +14,7 @@ var express     = require('express'),
     rest        = require('restler'),
     xml2js      = require('xml2js'),
     crypto      = require('crypto'),
+    fs          = require('fs'),
     moment      = require('moment'),
     hat         = require('hat'),
     rack        = hat.rack(),
@@ -136,6 +137,7 @@ router.get('/zadaniya', function(req, res) {
                   'status'  : task.status,
                   'numbers' : task.numbers,
                   'variant' : task.variant,
+                  'file'    : task.file,
                   'created' : moment(new Date(task.created_at))
                               .format('DD/MM/YYYY HH:mm ZZ'),
                   'updated' : moment(new Date(task.updated_at))
@@ -210,6 +212,24 @@ router.post('/input', function(req, res) {
             insalesid: req.session.insalesid,
             type: 5,
             status: 1,
+            created_at : new Date(),
+            updated_at : new Date()
+          });
+          T.save(function (err) {
+            if (err) {
+              log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
+              res.status(403).send('ошибка');
+            } else {
+              res.status(200).send('success');
+            }
+          });
+        } else if (req.param('data') == 2) {
+          // синхронизация
+          var T = new Tasks({
+            insalesid: req.session.insalesid,
+            type: 8,
+            status: 1,
+            file: 0,
             created_at : new Date(),
             updated_at : new Date()
           });
@@ -353,110 +373,27 @@ router.get('/export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        var wb = new xl.WorkBook();
-        var ws = wb.WorkSheet('Купоны');
-        var headerStyle = new rowStyle(wb, true, false, true);
-        var rowOddStyle = new rowStyle(wb, true, false, false);
-        var rowOddStyleMiddle = new rowStyle(wb, true, true, false);
-        var rowEvenStyle = new rowStyle(wb, false, false, false);
-        var rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
-        ws.Row(1).Height(30);
-        ws.Column(1).Width(30);
-        ws.Column(2).Width(30);
-        ws.Column(3).Width(30);
-        ws.Column(4).Width(30);
-        ws.Column(5).Width(30);
-        ws.Column(6).Width(30);
-        ws.Column(7).Width(30);
-        ws.Column(8).Width(30);
-        ws.Column(9).Width(30);
-        ws.Column(10).Width(30);
-        ws.Column(11).Width(30);
-        ws.Cell(1,1).String('Код купона').Style(headerStyle);
-        ws.Cell(1,2).String('Тип купона').Style(headerStyle);
-        ws.Cell(1,3).String('Тип скидки').Style(headerStyle);
-        ws.Cell(1,4).String('Величина скидки').Style(headerStyle);
-        ws.Cell(1,5).String('Описание').Style(headerStyle);
-        ws.Cell(1,6).String('Группа категорий').Style(headerStyle);
-        ws.Cell(1,7).String('Минимальная сумма заказа').Style(headerStyle);
-        ws.Cell(1,8).String('Один раз для каждого клиента').Style(headerStyle);
-        ws.Cell(1,9).String('Действителен по').Style(headerStyle);
-        ws.Cell(1,10).String('Заблокирован').Style(headerStyle);
-        ws.Cell(1,11).String('Использован').Style(headerStyle);
-        Coupons.find({
-          insalesid: req.session.insalesid
-        }, function(err, coupons) {
-             if (_.isEmpty(coupons)) {
-               res.sendStatus(200);
-             } else {
-               var i = 2;
-               async.each(coupons, function(coup, callback) {
-                 var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
-                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
-                 var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
-                 var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
-                 var expired = moment(new Date(coup.expired_at))
-                               .format('DD-MM-YYYY');
-                 var worked = ' ';
-                 if ((coup.disabled == 0) && (coup.worked == 0)) {
-                   worked = 'да';
-                 } else if ((coup.disabled == 0) && (coup.worked == 1)) {
-                   worked = 'нет';
-                 }
-                 var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
-                 ws.Row(i).Height(20);
-                 ws.Cell(i,1)
-                 .String(coup.code)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,2)
-                 .String(act)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,3)
-                 .String(type_discount)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,4)
-                 .Number(coup.discount)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,5)
-                 .String(coup.description)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,6)
-                 .String(coup.discountcollections)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,7)
-                 .String(minprice)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,8)
-                 .String(actclient)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,9)
-                 .String(expired)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,10)
-                 .String(disabled)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,11)
-                 .String(worked)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 i++;
-                 setImmediate(callback);
-               }, function(e) {
-                    if (e) {
-                      log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + e, 'error');
-                      res.sendStatus(200)
-                    } else {
-                      log('Отдаём xlsx файл');
-                      wb.write(__dirname + '/../public/coupons.xlsx', function(err) {
-                        if (err) {
-                          log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
-                        } else {
-                          res.sendStatus(200);
-                        }
-                      });
-                    }
-                  });
-             }
-           });
+        var path = __dirname + '/../files/' + req.session.insalesid + '/coupons.xlsx';
+        fs.exists(path, function(exists) {
+          if (exists) {
+            var stat = fs.statSync(path);
+            res.writeHead(200, {
+              'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              'Content-Length': stat.size,
+              'Content-Disposition': 'attachment; filename=coupons.xlsx'
+            });
+            var readStream = fs.createReadStream(path);
+            readStream.on('open', function () {
+              readStream.pipe(res);
+            });
+            readStream.on('error', function(err) {
+              log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
+              res.status(500).send('Произошла ошибка');
+            });
+          } else {
+            res.status(200).send('Файл отсуствует');
+          }
+        });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
@@ -705,7 +642,7 @@ setInterval(function() {
            Tasks.findById(result[i].id, function (err, task) {
              if (task.status == 1) {
                var j = {};
-               if (task.type == 5) {
+               if ((task.type == 5) || (task.type == 8)) {
                  j = {
                    data: {
                      id: task.insalesid,
@@ -900,7 +837,7 @@ var Queue = {
   },
 
   getCollections: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
+    Apps.findOne({insalesid: job.data.id}, function(err, app) {
       if (app.enabled == true) {
         rest.get('http://' + process.env.insalesid
                 + ':'
@@ -1038,6 +975,9 @@ var Queue = {
                   setImmediate(done);
                 } else if (job.data.type === 7) {
                   Queue.createJobParseXLSX(job);
+                  setImmediate(done);
+                } else if (job.data.type === 8) {
+                  Queue.createExportFile(job);
                   setImmediate(done);
                 } else {
                   log('Конец');
@@ -1645,6 +1585,137 @@ var Queue = {
     });
   },
 
+  createExportFile: function(job) {
+    Apps.findOne({insalesid: job.data.id}, function(err, app) {
+      if (app.enabled == true) {
+        var wb = new xl.WorkBook();
+        var ws = wb.WorkSheet('Купоны');
+        var headerStyle = new rowStyle(wb, true, false, true);
+        var rowOddStyle = new rowStyle(wb, true, false, false);
+        var rowOddStyleMiddle = new rowStyle(wb, true, true, false);
+        var rowEvenStyle = new rowStyle(wb, false, false, false);
+        var rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
+        ws.Row(1).Height(30);
+        ws.Column(1).Width(30);
+        ws.Column(2).Width(30);
+        ws.Column(3).Width(30);
+        ws.Column(4).Width(30);
+        ws.Column(5).Width(30);
+        ws.Column(6).Width(30);
+        ws.Column(7).Width(30);
+        ws.Column(8).Width(30);
+        ws.Column(9).Width(30);
+        ws.Column(10).Width(30);
+        ws.Column(11).Width(30);
+        ws.Cell(1,1).String('Код купона').Style(headerStyle);
+        ws.Cell(1,2).String('Тип купона').Style(headerStyle);
+        ws.Cell(1,3).String('Тип скидки').Style(headerStyle);
+        ws.Cell(1,4).String('Величина скидки').Style(headerStyle);
+        ws.Cell(1,5).String('Описание').Style(headerStyle);
+        ws.Cell(1,6).String('Группа категорий').Style(headerStyle);
+        ws.Cell(1,7).String('Минимальная сумма заказа').Style(headerStyle);
+        ws.Cell(1,8).String('Один раз для каждого клиента').Style(headerStyle);
+        ws.Cell(1,9).String('Действителен по').Style(headerStyle);
+        ws.Cell(1,10).String('Заблокирован').Style(headerStyle);
+        ws.Cell(1,11).String('Использован').Style(headerStyle);
+        Coupons.find({
+          insalesid: job.data.id
+        }, function(err, coupons) {
+             if (_.isEmpty(coupons)) {
+               Queue.createJobCloseTask(job.data.taskid, 'Отсутствуют купоны в базе приложения');
+             } else {
+               var i = 2;
+               async.each(coupons, function(coup, callback) {
+                 var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
+                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
+                 var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
+                 var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
+                 var expired = moment(new Date(coup.expired_at))
+                               .format('DD-MM-YYYY');
+                 var worked = ' ';
+                 if ((coup.disabled == 0) && (coup.worked == 0)) {
+                   worked = 'да';
+                 } else if ((coup.disabled == 0) && (coup.worked == 1)) {
+                   worked = 'нет';
+                 }
+                 var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
+                 ws.Row(i).Height(20);
+                 ws.Cell(i,1)
+                 .String(coup.code)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,2)
+                 .String(act)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,3)
+                 .String(type_discount)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,4)
+                 .Number(coup.discount)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,5)
+                 .String(coup.description)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,6)
+                 .String(coup.discountcollections)
+                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+                 ws.Cell(i,7)
+                 .String(minprice)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,8)
+                 .String(actclient)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,9)
+                 .String(expired)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,10)
+                 .String(disabled)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 ws.Cell(i,11)
+                 .String(worked)
+                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+                 i++;
+                 setImmediate(callback);
+               }, function(e) {
+                    if (e) {
+                      log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
+                    } else {
+                      log('Записываем xlsx файл');
+                      var path = __dirname + '/../files/' + job.data.id;
+                      fs.exists(path, function(exists) {
+                        if (exists) {
+                          wb.write(path + '/coupons.xlsx', function(err) {
+                            if (err) {
+                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                            } else {
+                              Queue.createJobCloseTask(job.data.taskid);
+                            }
+                          });
+                        } else {
+                          fs.mkdir(path, function(err) {
+                            if (err) {
+                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                            } else {
+                              wb.write(path + '/coupons.xlsx', function(err) {
+                                if (err) {
+                                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                                } else {
+                                  Queue.createJobCloseTask(job.data.taskid);
+                                }
+                              });
+                            }
+                          });
+                        }
+                      });
+                    }
+                  });
+             }
+           });
+      } else {
+        log('Приложение не установлено для данного магазина', 'warn');
+      }
+    })
+  },
+
   createJobCloseTask: function(taskid, message) {
     log('Создаём задание на зыкрытие');
     log(taskid);
@@ -1668,6 +1739,9 @@ var Queue = {
       task.updated_at = new Date();
       if (!_.isUndefined(message)) {
         task.message = message;
+      }
+      if ((_.isUndefined(message)) && (task.type == 8)) {
+        task.file = 1;
       }
       task.save(function(err) {
         if (err) {
@@ -1865,6 +1939,7 @@ TasksSchema.add({
   path         : String, // путь до файла во время импорта
   status       : Number, // статус задания
   message      : String, // сообщение об ошибке
+  file         : Number, // тригер о готовности файла
   numbers      : Number, // количество купонов
   parts        : Number, // количество частей купона
   length       : Number, // длина части купона
