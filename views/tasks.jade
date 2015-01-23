@@ -12,6 +12,8 @@ mixin list(val)
        | синхронизация купонов
       else if val.type == 7
        | импорт купонов
+      else if val.type == 8
+       | экспорт
     if val.type == 1 || val.type == 3
       li
         strong Вариант: 
@@ -36,6 +38,10 @@ mixin list(val)
       li
         strong Количество купонов: 
         = val.numbers
+    if val.file == 1
+      li
+        strong Файл: 
+        a(href="javascript:window.location='/export'") скачать файл coupons.xlsx
     if !_.isUndefined(val.message)
       li
         strong Ошибка: 
