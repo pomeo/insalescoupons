@@ -77,6 +77,20 @@ $(document).ready(function() {
       }
     });
   });
+  $("#button-export").click(function() {
+    $.ajax({
+      type: "POST",
+      url: "/input",
+      data: { data: 2 }
+    })
+    .done(function(response) {
+      if (response == "success") {
+        $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+      } else {
+        $.UIkit.notify("ошибка", {status:'danger'});
+      }
+    });
+  });
   $("input[name='c-part'], input[name='c-partlen']").change(sample);
   function sample() {
     var n = $("input[name='c-num']").val();
