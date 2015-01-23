@@ -215,11 +215,9 @@ router.post('/input', function(req, res) {
           });
           T.save(function (err) {
             if (err) {
-              log('Ошибка');
-              log(err);
+              log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
               res.status(403).send('ошибка');
             } else {
-              log('Done');
               res.status(200).send('success');
             }
           });
@@ -235,11 +233,9 @@ router.post('/input', function(req, res) {
           });
           T.save(function (err) {
             if (err) {
-              log('Ошибка');
-              log(err);
+              log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
               res.status(403).send('ошибка');
             } else {
-              log('Done');
               res.status(200).send('success');
             }
           });
@@ -276,7 +272,7 @@ router.post('/import', function(req, res) {
     var form = new formidable.IncomingForm();
     form.keepExtensions = true;
     form.on('error', function(err) {
-      log(err);
+      log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
     });
 
     form.on('end', function() {
@@ -294,8 +290,7 @@ router.post('/import', function(req, res) {
       });
       T.save(function (err) {
         if (err) {
-          log('Ошибка');
-          log(err);
+          log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
         } else {
           log('Done');
         }
@@ -447,13 +442,13 @@ router.get('/export', function(req, res) {
                  setImmediate(callback);
                }, function(e) {
                     if (e) {
-                      log('Ошибка');
+                      log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + e, 'error');
                       res.sendStatus(200)
                     } else {
                       log('Отдаём xlsx файл');
                       wb.write(__dirname + '/../public/coupons.xlsx', function(err) {
                         if (err) {
-                          log('ошибка');
+                          log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
                         } else {
                           res.sendStatus(200);
                         }
@@ -532,18 +527,16 @@ router.post('/generate', function(req, res) {
                     s.updated_at = new Date();
                     s.save(function (err) {
                       if (err) {
-                        log('Ошибка сохранения', 'error');
-                        log(err, 'error');
+                        log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
                         setImmediate(callback);
                       } else {
                         exist[s.property] = 1;
-                        log('Ok');
                         setImmediate(callback);
                       }
                     });
                   }, function(e) {
                        if (e) {
-                         log('A coupons failed to process');
+                         log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + e, 'error');
                        } else {
                          for (var prop in exist) {
                            if (exist[prop] == -1) {
@@ -556,8 +549,7 @@ router.post('/generate', function(req, res) {
                              });
                              sett.save(function (err) {
                                if (err) {
-                                 log('Ошибка');
-                                 log(err);
+                                 log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
                                } else {
                                  log('Ok');
                                }
@@ -586,10 +578,8 @@ router.post('/generate', function(req, res) {
                          });
                          T.save(function (err) {
                            if (err) {
-                             log('Ошибка');
-                             log(err);
+                             log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
                            } else {
-                             log('Done');
                              res.json('success');
                            }
                          });
@@ -679,7 +669,7 @@ router.get('/data', function(req, res) {
                setImmediate(callback);
              }, function(e) {
                   if (e) {
-                    log('Ошибка');
+                    log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + e, 'error');
                     res.sendStatus(200);
                   } else {
                     res.json(data);
@@ -709,7 +699,7 @@ setInterval(function() {
     }
   }], function(err, result) {
        if (err) {
-         log(err);
+         log('Ошибка: ' + err, 'error');
        } else {
          for (var i = 0; i < result.length; i++) {
            Tasks.findById(result[i].id, function (err, task) {
@@ -798,9 +788,10 @@ setInterval(function() {
                }
                Queue.createJobDeleteCouponsFromApp(j);
                task.status = 2;
+               task.updated_at = new Date();
                task.save(function (err) {
                  if (err) {
-                   log(err);
+                   log('Ошибка: ' + err, 'error');
                  } else {
                    log('Done');
                  }
@@ -840,8 +831,7 @@ var Queue = {
   deleteCouponsFromApp: function(job, done) {
     Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
       if (err) {
-        log('Ошибка', 'error');
-        log(err);
+        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
         Queue.createJobDeleteCouponsFromApp(job);
         setImmediate(done);
       } else {
@@ -875,8 +865,7 @@ var Queue = {
   deleteCollectionsFromApp: function(job, done) {
     Collections.remove({insalesid:job.data.id}, function(err, collection) {
       if (err) {
-        log('Ошибка', 'error');
-        log(err);
+        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
         Queue.createJobDeleteCollectionsFromApp(job);
         setImmediate(done);
       } else {
@@ -922,11 +911,11 @@ var Queue = {
                   headers: {'Content-Type': 'application/xml'}
                 }).once('complete', function(o) {
           if (o instanceof Error) {
-            log('Error:', o.message);
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
             this.retry(5000);
           } else {
             if (o.errors) {
-              log('Ошибка');
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
               log('Заходим в функцию дёрганья категорий');
@@ -942,8 +931,7 @@ var Queue = {
                 });
                 collection.save(function (err) {
                   if (err) {
-                    log('Ошибка');
-                    log(err);
+                    log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                     setImmediate(done);
                   } else {
                     log('Сохранёна категория из магазина в базу приложения');
@@ -963,8 +951,7 @@ var Queue = {
                   });
                   collection.save(function (err) {
                     if (err) {
-                      log('Ошибка');
-                      log(err);
+                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                       setImmediate(callback);
                     } else {
                       log('Сохранена категория из магазина в базу приложения');
@@ -973,7 +960,7 @@ var Queue = {
                   });
                 }, function(e) {
                      if (e) {
-                       log('A collections failed to process');
+                       log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
                        Queue.createJobGetCollections(job);
                        setImmediate(done);
                      } else {
@@ -1032,11 +1019,11 @@ var Queue = {
                   headers: {'Content-Type': 'application/xml'}
                 }).once('complete', function(o) {
           if (o instanceof Error) {
-            log('Error:', o.message);
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
             this.retry(5000);
           } else {
             if (o.errors) {
-              log('Ошибка');
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
               log('Заходим в функцию дёрганья купонов');
@@ -1067,7 +1054,7 @@ var Queue = {
                       C.find({'colid': {$in:collection}});
                       C.exec(function(err, collec) {
                         if (err) {
-                          log(err);
+                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                           setImmediate(done);
                         } else {
                           for (var i = 0, len = collec.length; i < len; i++) {
@@ -1093,8 +1080,7 @@ var Queue = {
                           });
                           coupon.save(function (err) {
                             if (err) {
-                              log('Ошибка');
-                              log(err);
+                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                               setImmediate(done);
                             } else {
                               log('Сохранён купон из магазина в базу приложения');
@@ -1126,8 +1112,7 @@ var Queue = {
                     });
                     coupon.save(function (err) {
                       if (err) {
-                        log('Ошибка');
-                        log(err);
+                        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                         setImmediate(done);
                       } else {
                         log('Сохранён купон из магазина в базу приложения');
@@ -1147,7 +1132,7 @@ var Queue = {
                       C.find({'colid': {$in:collection}});
                       C.exec(function(err, collec) {
                         if (err) {
-                          log(err);
+                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                           setImmediate(callback);
                         } else {
                           for (var i = 0, len = collec.length; i < len; i++) {
@@ -1173,8 +1158,7 @@ var Queue = {
                           });
                           coupon.save(function (err) {
                             if (err) {
-                              log('Ошибка');
-                              log(err);
+                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                               setImmediate(callback);
                             } else {
                               log('Сохранён купон из магазина в базу приложения');
@@ -1204,8 +1188,7 @@ var Queue = {
                       });
                       coupon.save(function (err) {
                         if (err) {
-                          log('Ошибка');
-                          log(err);
+                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                           setImmediate(callback);
                         } else {
                           log('Сохранён купон из магазина в базу приложения');
@@ -1215,7 +1198,7 @@ var Queue = {
                     }
                   }, function(e) {
                        if (e) {
-                         log('A coupons failed to process');
+                         log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
                          Queue.createJobGetCoupons(job);
                          setImmediate(done);
                        } else {
@@ -1265,7 +1248,7 @@ var Queue = {
         setImmediate(callback);
       }, function(e) {
            if (e) {
-             log('Ошибка');
+             log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
            } else {
              log('Задание на удаление создано');
              jobs.create('deleteInsales', {
@@ -1289,7 +1272,6 @@ var Queue = {
   },
 
   deleteCoupons: function(job, done) {
-    log('Включилась функция удаления купонов');
     Apps.findOne({insalesid:job.data.id}, function(err, app) {
       if (app.enabled == true) {
         rest.del('http://' + process.env.insalesid + ':'
@@ -1300,14 +1282,14 @@ var Queue = {
                   headers: {'Content-Type': 'application/xml'}
                 }).once('complete', function(o) {
           if (o !== null && o.errors) {
-            log('Ошибка ' + JSON.stringify(o));
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + JSON.stringify(o), 'error');
             var re = new RegExp(job.data.couponid,"g");
             if (o.errors.error.match(re)) {
               Coupons.findOneAndRemove({
                 guid: job.data.couponid
               }, function (err, r){
                    if (err) {
-                     log('Ошибка');
+                     log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                      setImmediate(done);
                    } else {
                      log('Удалён купон из магазина и базы приложения');
@@ -1320,7 +1302,7 @@ var Queue = {
               guid: job.data.couponid
             }, function (err, r){
                  if (err) {
-                   log('Ошибка');
+                   log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                    setImmediate(done);
                  } else {
                    log('Удалён купон из магазина и базы приложения');
@@ -1330,7 +1312,7 @@ var Queue = {
           }
         });
       } else {
-        log('Приложение не установлено для данного магазина');
+        log('Приложение не установлено для данного магазина', 'warn');
         setImmediate(done);
       }
     });
@@ -1379,7 +1361,7 @@ var Queue = {
           C.find({code:row['Код купона']});
           C.exec(function(err, coupon) {
             if (err) {
-              log(err);
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
               setImmediate(callback);
             } else {
               var type_discount = '';
@@ -1477,7 +1459,7 @@ var Queue = {
       }
     }, function(e) {
          if (e) {
-           log('A coupons failed to process');
+           log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
            Queue.createJobParseXLSX(job);
          } else {
            log('All coupons have been processed successfully');
@@ -1516,18 +1498,17 @@ var Queue = {
                   headers: {'Content-Type': 'application/xml'}
                 }).once('complete', function(o) {
           if (o instanceof Error) {
-            log('Error:', o.message);
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
             this.retry(5000);
           } else {
             if (o.errors) {
-              log('Ошибка');
-              log(o);
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
               log(o);
               Coupons.findOne({guid:job.data.guid}, function(err, coupon) {
                 if (err) {
-                  log(err);
+                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                   setImmediate(done);
                 } else {
                   coupon.code        = o['discount-code']['code'];
@@ -1544,8 +1525,7 @@ var Queue = {
                   coupon.disabled    = o['discount-code']['disabled'];
                   coupon.save(function (err) {
                     if (err) {
-                      log('Ошибка');
-                      log(err);
+                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                       setImmediate(done);
                     } else {
                       log('Обновлён купон');
@@ -1585,6 +1565,7 @@ var Queue = {
         setImmediate(callback);
       },
       function(err) {
+        // TODO ошибку словить
         jobs.create('create', {
           taskid: job.data.taskid
         }).delay(600).priority('normal').save();
@@ -1620,15 +1601,13 @@ var Queue = {
                    headers: {'Content-Type': 'application/xml'}
                  }).once('complete', function(o) {
           if (o instanceof Error) {
-            log('Error:', o.message);
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
             this.retry(5000);
           } else {
             if (o.errors) {
-              log('Ошибка');
-              log(o);
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              log(o);
               log(_.isEmpty(o));
               var coupon = new Coupons({
                 insalesid           : job.data.id,
@@ -1641,6 +1620,7 @@ var Queue = {
                 discount            : o['discount-code']['discount'],
                 minprice            : o['discount-code']['min-price'],
                 worked              : o['discount-code']['worked'],
+                discountcollections : 'Все',
                 expired_at          : o['discount-code']['expired-at'],
                 created_at          : o['discount-code']['created-at'],
                 updated_at          : o['discount-code']['updated-at'],
@@ -1648,8 +1628,7 @@ var Queue = {
               });
               coupon.save(function (err) {
                 if (err) {
-                  log('Ошибка');
-                  log(err);
+                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                   setImmediate(done);
                 } else {
                   log('Создан купон');
@@ -1686,12 +1665,13 @@ var Queue = {
     log('Закрываем таск');
     Tasks.findById(taskid, function(err, task) {
       task.status = 3;
+      task.updated_at = new Date();
       if (!_.isUndefined(message)) {
         task.message = message;
       }
       task.save(function(err) {
         if (err) {
-          log(err);
+          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
           Queue.createJobCloseTask(taskid, message);
           setImmediate(done);
         } else {
@@ -1774,6 +1754,7 @@ router.get('/install', function(req, res) {
         });
         app.save(function (err) {
           if (err) {
+            log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
             res.send(err, 500);
           } else {
             res.send(200);
@@ -1790,6 +1771,7 @@ router.get('/install', function(req, res) {
           a.enabled = true;
           a.save(function (err) {
             if (err) {
+              log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
               res.send(err, 500);
             } else {
               res.send(200);
@@ -1816,6 +1798,7 @@ router.get('/uninstall', function(req, res) {
         a.enabled = false;
         a.save(function (err) {
           if (err) {
+            log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
             res.send(err, 500);
           } else {
             res.send(200);
