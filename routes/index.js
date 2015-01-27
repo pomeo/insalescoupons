@@ -1747,6 +1747,55 @@ var Queue = {
     })
   },
 
+  pay: function(job, done) {
+    Apps.findOne({insalesid:job.data.id}, function(err, app) {
+      if (app.enabled == true) {
+        var pay = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
+                + '<recurring-application-charge>'
+                + '<monthly type=\"decimal\">300.0</monthly>'
+                + '</recurring-application-charge>';
+        rest.post('http://' + process.env.insalesid + ':'
+                 + app.token + '@'
+                 + app.insalesurl
+                 + '/admin/recurring_application_charge.xml', {
+                   data: pay,
+                   headers: {'Content-Type': 'application/xml'}
+                 }).once('complete', function(o) {
+          if (o instanceof Error) {
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
+            this.retry(5000);
+          } else {
+            if (o.errors) {
+              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
+              setImmediate(done);
+            } else {
+              var p = new Charges({
+                insalesid  : job.data.id,
+                guid       : o['recurring-application-charge']['id'],
+                free       : 0,
+                monthly    : o['recurring-application-charge']['monthly'],
+                till       : o['recurring-application-charge']['paid-till'],
+                created_at : o['recurring-application-charge']['created-at'],
+                updated_at : o['recurring-application-charge']['updated-at'],
+                blocked    : o['recurring-application-charge']['blocked']
+              });
+              p.save(function (err) {
+                if (err) {
+                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                } else {
+                  log('Магазин id=' + job.data.id + ' Создан счёт');
+                  setImmediate(done);
+                }
+              });
+            }
+          }
+        });
+      } else {
+        log('Приложение не установлено для данного магазина', 'warn');
+      }
+    });
+  },
+
   createJobCloseTask: function(taskid, message) {
     log('Создаём задание на зыкрытие');
     log(taskid);
@@ -1838,6 +1887,30 @@ jobs.process('close', function(job, done) {
   Queue.closeTask(job.data.taskid, job.data.message, done);
 });
 
+jobs.process('sync', function(job) {
+  // после установки первое задание на синхронизации
+  var T = new Tasks({
+    insalesid: job.data.id,
+    type: 8,
+    status: 1,
+    file: 0,
+    created_at : new Date(),
+    updated_at : new Date()
+  });
+  T.save(function (err) {
+    if (err) {
+      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+    } else {
+      log('Магазин id=' + job.data.id + ' Создано задание на синхронизацию после установки');
+    }
+  });
+});
+
+jobs.process('pay', function(job, done) {
+  // после установки выставить счёт
+  Queue.pay(job, done);
+});
+
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') &&
       (req.query.token !== '') &&
@@ -1863,6 +1936,12 @@ router.get('/install', function(req, res) {
             res.send(err, 500);
           } else {
             res.send(200);
+            jobs.create('sync', {
+              id: req.query.insales_id
+            }).delay(600).priority('normal').save();
+            jobs.create('pay', {
+              id: req.query.insales_id
+            }).delay(600).priority('normal').save();
           }
         });
       } else {
@@ -1880,6 +1959,12 @@ router.get('/install', function(req, res) {
               res.send(err, 500);
             } else {
               res.send(200);
+              jobs.create('sync', {
+                id: a.insalesid
+              }).delay(600).priority('normal').save();
+              jobs.create('pay', {
+                id: a.insalesid
+              }).delay(600).priority('normal').save();
             }
           });
         }
@@ -1927,11 +2012,10 @@ var ChargesSchema = new Schema();
 ChargesSchema.add({
   insalesid        : { type: Number, index: true }, // id магазина
   guid             : { type: Number, index: true }, // id списания
-  type             : Number, // для себя, платит магазин за приложение или нет
-  monthly          : Number, // сумма
-  blocked          : Boolean, //
-  paid_till        : Date, // заплатить до этой даты
-  trial_expired_at : Date, // триал заканчивается в эту дату
+  free             : Number, // для себя, платит магазин за приложение или нет
+  monthly          : String, // сумма
+  till             : String, // заплачено до
+  blocked          : Boolean, // заблочен за неуплату
   updated_at       : Date, // дата из ответа insales
   created_at       : Date // дата из ответа insales
 });
