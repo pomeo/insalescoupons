@@ -1998,6 +1998,68 @@ jobs.process('pay', function(job, done) {
   Queue.pay(job, done);
 });
 
+jobs.process('checkpay', function(job, done) {
+  // дёргаем данные об оплате из insales
+  Charges.findOne({insalesid: job.data.id}, function(err, charge) {
+    rest.get('http://' + process.env.insalesid
+            + ':'
+            + job.data.token
+            + '@'
+            + job.data.insalesurl
+            + '/admin/recurring_application_charge.xml', {
+              headers: {'Content-Type': 'application/xml'}
+            }).once('complete', function(o) {
+      if (o instanceof Error) {
+        log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
+        setImmediate(done);
+      } else {
+        if (o.errors) {
+          log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
+          setImmediate(done);
+        } else {
+          if (_.isEmpty(charge)) {
+            var p = new Charges({
+              insalesid  : job.data.id,
+              guid       : o['recurring-application-charge']['id'],
+              monthly    : o['recurring-application-charge']['monthly'],
+              till       : o['recurring-application-charge']['paid-till'],
+              created_at : o['recurring-application-charge']['created-at'],
+              updated_at : o['recurring-application-charge']['updated-at'],
+              blocked    : o['recurring-application-charge']['blocked']
+            });
+            p.save(function (err) {
+              if (err) {
+                log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                setImmediate(done);
+              } else {
+                log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
+                setImmediate(done);
+              }
+            });
+          } else {
+            charge.guid = o['recurring-application-charge']['id'];
+            charge.monthly = o['recurring-application-charge']['monthly'];
+            charge.till = o['recurring-application-charge']['paid-till'];
+            charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
+            charge.created_at = o['recurring-application-charge']['created-at'];
+            charge.updated_at = o['recurring-application-charge']['updated-at'];
+            charge.blocked = o['recurring-application-charge']['blocked'];
+            charge.save(function (err) {
+              if (err) {
+                log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                setImmediate(done);
+              } else {
+                log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
+                setImmediate(done);
+              }
+            });
+          }
+        }
+      }
+    });
+  });
+});
+
 router.get('/install', function(req, res) {
   if ((req.query.shop !== '') &&
       (req.query.token !== '') &&
