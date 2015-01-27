@@ -1966,12 +1966,7 @@ jobs.process('get', function(job, done) {
 
 jobs.process('create', function(job, done) {
   // создаём купоны
-  if (job.data.id === undefined) {
-    Queue.createJobCloseTask(job.data.taskid);
-    setImmediate(done);
-  } else {
-    Queue.createCoupons(job, done);
-  }
+  Queue.createCoupons(job, done);
 });
 
 jobs.process('close', function(job, done) {
