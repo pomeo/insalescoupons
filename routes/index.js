@@ -82,17 +82,27 @@ router.get('/', function(req, res) {
                      log('Ошибка во время работы async. Вывод свойств формы генерации в шаблон', 'error');
                      log(e, 'error');
                    } else {
-                     res.render('index', {
-                       title    : '',
-                       number   : typeof sett['coupon-number'] !== 'undefined' ? sett['coupon-number'] : 5,
-                       parts    : typeof sett['coupon-parts'] !== 'undefined' ? sett['coupon-parts'] : 3,
-                       length   : typeof sett['coupon-part-lengths'] !== 'undefined' ? sett['coupon-part-lengths'] : 6,
-                       act      : typeof sett['coupon-act'] !== 'undefined' ? sett['coupon-act'] : 1,
-                       variants : typeof sett['coupon-variants'] !== 'undefined' ? sett['coupon-variants'] : 1,
-                       type     : typeof sett['coupon-type-discount'] !== 'undefined' ? sett['coupon-type-discount'] : 1,
-                       discount : typeof sett['coupon-discount'] !== 'undefined' ? sett['coupon-discount'] : '',
-                       expired  : typeof sett['coupon-until'] !== 'undefined' ? sett['coupon-until'] : '01.01.2016'
-                     });
+                     Charges.findOne({
+                       insalesid: req.session.insalesid
+                     }, function(err, charge) {
+                          if (charge.blocked) {
+                            res.render('block', {
+                              title    : ''
+                            });
+                          } else {
+                            res.render('index', {
+                              title    : '',
+                              number   : typeof sett['coupon-number'] !== 'undefined' ? sett['coupon-number'] : 5,
+                              parts    : typeof sett['coupon-parts'] !== 'undefined' ? sett['coupon-parts'] : 3,
+                              length   : typeof sett['coupon-part-lengths'] !== 'undefined' ? sett['coupon-part-lengths'] : 6,
+                              act      : typeof sett['coupon-act'] !== 'undefined' ? sett['coupon-act'] : 1,
+                              variants : typeof sett['coupon-variants'] !== 'undefined' ? sett['coupon-variants'] : 1,
+                              type     : typeof sett['coupon-type-discount'] !== 'undefined' ? sett['coupon-type-discount'] : 1,
+                              discount : typeof sett['coupon-discount'] !== 'undefined' ? sett['coupon-discount'] : '',
+                              expired  : typeof sett['coupon-until'] !== 'undefined' ? sett['coupon-until'] : '01.01.2016'
+                            });
+                          }
+                        });
                    }
                  });
             } else {
@@ -129,77 +139,87 @@ router.get('/zadaniya', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        var T = Tasks.find({insalesid: req.session.insalesid});
-        T.sort({created_at: -1});
-        T.limit(50);
-        T.exec(function(err, tasks) {
-          var tasksList = [];
-          var tasksDone = [];
-          var tasksProcessing = [];
-          async.each(tasks, function(task, callback) {
-            if (task.status == 3) {
-              if (_.isUndefined(task.message)) {
-                tasksDone.push({
-                  'type'    : task.type,
-                  'status'  : task.status,
-                  'numbers' : task.numbers,
-                  'variant' : task.variant,
-                  'file'    : task.file,
-                  'created' : moment(new Date(task.created_at))
-                              .format('DD/MM/YYYY HH:mm ZZ'),
-                  'updated' : moment(new Date(task.updated_at))
-                              .format('DD/MM/YYYY HH:mm ZZ')
-                });
-                setImmediate(callback);
-              } else {
-                tasksDone.push({
-                  'type'    : task.type,
-                  'status'  : task.status,
-                  'numbers' : task.numbers,
-                  'variant' : task.variant,
-                  'message' : task.message,
-                  'created' : moment(new Date(task.created_at))
-                              .format('DD/MM/YYYY HH:mm ZZ'),
-                  'updated' : moment(new Date(task.updated_at))
-                              .format('DD/MM/YYYY HH:mm ZZ')
-                });
-                setImmediate(callback);
-              }
-            } else if (task.status == 2) {
-              tasksProcessing.push({
-                'type'    : task.type,
-                'status'  : task.status,
-                'numbers' : task.numbers,
-                'variant' : task.variant,
-                'created' : moment(new Date(task.created_at))
-                            .format('DD/MM/YYYY HH:mm ZZ'),
-                'updated' : moment(new Date(task.updated_at))
-                            .format('DD/MM/YYYY HH:mm ZZ')
-              });
-              setImmediate(callback);
-            } else {
-              tasksList.push({
-                'type'    : task.type,
-                'status'  : task.status,
-                'numbers' : task.numbers,
-                'variant' : task.variant,
-                'created' : moment(new Date(task.created_at))
-                            .format('DD/MM/YYYY HH:mm ZZ'),
-                'updated' : moment(new Date(task.updated_at))
-                            .format('DD/MM/YYYY HH:mm ZZ')
-              });
-              setImmediate(callback);
-            }
-          }, function(err) {
-               res.render('tasks', {
-                 title      : '',
-                 _          : _,
-                 tasks      : tasksList,
-                 done       : tasksDone,
-                 processing : tasksProcessing
+        Charges.findOne({
+          insalesid: req.session.insalesid
+        }, function(err, charge) {
+             if (charge.blocked) {
+               res.render('block', {
+                 title    : ''
                });
-             });
-        });
+             } else {
+               var T = Tasks.find({insalesid: req.session.insalesid});
+               T.sort({created_at: -1});
+               T.limit(50);
+               T.exec(function(err, tasks) {
+                 var tasksList = [];
+                 var tasksDone = [];
+                 var tasksProcessing = [];
+                 async.each(tasks, function(task, callback) {
+                   if (task.status == 3) {
+                     if (_.isUndefined(task.message)) {
+                       tasksDone.push({
+                         'type'    : task.type,
+                         'status'  : task.status,
+                         'numbers' : task.numbers,
+                         'variant' : task.variant,
+                         'file'    : task.file,
+                         'created' : moment(new Date(task.created_at))
+                                     .format('DD/MM/YYYY HH:mm ZZ'),
+                         'updated' : moment(new Date(task.updated_at))
+                                     .format('DD/MM/YYYY HH:mm ZZ')
+                       });
+                       setImmediate(callback);
+                     } else {
+                       tasksDone.push({
+                         'type'    : task.type,
+                         'status'  : task.status,
+                         'numbers' : task.numbers,
+                         'variant' : task.variant,
+                         'message' : task.message,
+                         'created' : moment(new Date(task.created_at))
+                                     .format('DD/MM/YYYY HH:mm ZZ'),
+                         'updated' : moment(new Date(task.updated_at))
+                                     .format('DD/MM/YYYY HH:mm ZZ')
+                       });
+                       setImmediate(callback);
+                     }
+                   } else if (task.status == 2) {
+                     tasksProcessing.push({
+                       'type'    : task.type,
+                       'status'  : task.status,
+                       'numbers' : task.numbers,
+                       'variant' : task.variant,
+                       'created' : moment(new Date(task.created_at))
+                                   .format('DD/MM/YYYY HH:mm ZZ'),
+                       'updated' : moment(new Date(task.updated_at))
+                                   .format('DD/MM/YYYY HH:mm ZZ')
+                     });
+                     setImmediate(callback);
+                   } else {
+                     tasksList.push({
+                       'type'    : task.type,
+                       'status'  : task.status,
+                       'numbers' : task.numbers,
+                       'variant' : task.variant,
+                       'created' : moment(new Date(task.created_at))
+                                   .format('DD/MM/YYYY HH:mm ZZ'),
+                       'updated' : moment(new Date(task.updated_at))
+                                   .format('DD/MM/YYYY HH:mm ZZ')
+                     });
+                     setImmediate(callback);
+                   }
+                 }, function(err) {
+                      res.render('tasks', {
+                        title      : '',
+                        _          : _,
+                        tasks      : tasksList,
+                        done       : tasksDone,
+                        processing : tasksProcessing
+                      });
+                    });
+               });
+             }
+           });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
@@ -285,9 +305,19 @@ router.get('/import-export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        res.render('io', {
-          title    : ''
-        });
+        Charges.findOne({
+          insalesid: req.session.insalesid
+        }, function(err, charge) {
+             if (charge.blocked) {
+               res.render('block', {
+                 title    : ''
+               });
+             } else {
+               res.render('io', {
+                 title    : ''
+               });
+             }
+           });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
@@ -418,9 +448,19 @@ router.get('/opisanie', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
       if (app.enabled == true) {
-        res.render('desc', {
-          title    : ''
-        });
+        Charges.findOne({
+          insalesid: req.session.insalesid
+        }, function(err, charge) {
+             if (charge.blocked) {
+               res.render('block', {
+                 title    : ''
+               });
+             } else {
+               res.render('desc', {
+                 title    : ''
+               });
+             }
+           });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
