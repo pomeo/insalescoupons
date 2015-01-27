@@ -952,7 +952,7 @@ var Queue = {
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            this.retry(5000);
+            setImmediate(done);
           } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
@@ -1060,7 +1060,7 @@ var Queue = {
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            this.retry(5000);
+            setImmediate(done);
           } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
@@ -1543,7 +1543,7 @@ var Queue = {
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            this.retry(5000);
+            setImmediate(done);
           } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
@@ -1643,7 +1643,7 @@ var Queue = {
                  }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            this.retry(5000);
+            setImmediate(done);
           } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
@@ -1833,7 +1833,7 @@ var Queue = {
                  }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            this.retry(5000);
+            setImmediate(done);
           } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
