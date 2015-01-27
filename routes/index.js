@@ -1839,22 +1839,44 @@ var Queue = {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              var p = new Charges({
-                insalesid  : job.data.id,
-                guid       : o['recurring-application-charge']['id'],
-                free       : 0,
-                monthly    : o['recurring-application-charge']['monthly'],
-                till       : o['recurring-application-charge']['paid-till'],
-                created_at : o['recurring-application-charge']['created-at'],
-                updated_at : o['recurring-application-charge']['updated-at'],
-                blocked    : o['recurring-application-charge']['blocked']
-              });
-              p.save(function (err) {
-                if (err) {
-                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+              Charges.findOne({insalesid: job.data.id}, function(err, charge) {
+                if (_.isEmpty(charge)) {
+                  var p = new Charges({
+                    insalesid  : job.data.id,
+                    guid       : o['recurring-application-charge']['id'],
+                    monthly    : o['recurring-application-charge']['monthly'],
+                    till       : o['recurring-application-charge']['paid-till'],
+                    expired_at : o['recurring-application-charge']['trial-expired-at'],
+                    created_at : o['recurring-application-charge']['created-at'],
+                    updated_at : o['recurring-application-charge']['updated-at'],
+                    blocked    : o['recurring-application-charge']['blocked']
+                  });
+                  p.save(function (err) {
+                    if (err) {
+                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                      setImmediate(done);
+                    } else {
+                      log('Магазин id=' + job.data.id + ' Создан счёт');
+                      setImmediate(done);
+                    }
+                  });
                 } else {
-                  log('Магазин id=' + job.data.id + ' Создан счёт');
-                  setImmediate(done);
+                  charge.guid = o['recurring-application-charge']['id'];
+                  charge.monthly = o['recurring-application-charge']['monthly'];
+                  charge.till = o['recurring-application-charge']['paid-till'];
+                  charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
+                  charge.created_at = o['recurring-application-charge']['created-at'];
+                  charge.updated_at = o['recurring-application-charge']['updated-at'];
+                  charge.blocked = o['recurring-application-charge']['blocked'];
+                  charge.save(function (err) {
+                    if (err) {
+                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                      setImmediate(done);
+                    } else {
+                      log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
+                      setImmediate(done);
+                    }
+                  });
                 }
               });
             }
