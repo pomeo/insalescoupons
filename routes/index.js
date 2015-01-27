@@ -558,7 +558,6 @@ router.post('/generate', function(req, res) {
                            typediscount: form['coupon-type-discount'],
                            discount: form['coupon-discount'],
                            until: form['coupon-until'],
-                           group: form['coupon-group'],
                            count: 0,
                            created_at : new Date(),
                            updated_at : new Date()
