@@ -497,12 +497,10 @@ router.post('/generate', function(req, res) {
                              });
                            }
                          }
-                         log(req.session.insalesid);
                          var T = new Tasks({
                            insalesid: req.session.insalesid,
                            type: 1,
                            status: 1,
-                           groupid: rack(),
                            numbers: form['coupon-number'],
                            parts: form['coupon-parts'],
                            length: form['coupon-part-lengths'],
