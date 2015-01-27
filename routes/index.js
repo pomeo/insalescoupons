@@ -18,6 +18,7 @@ var express     = require('express'),
     moment      = require('moment'),
     hat         = require('hat'),
     rack        = hat.rack(),
+    Agenda      = require('agenda'),
     async       = require('async'),
     cc          = require('coupon-code'),
     _           = require('lodash'),
@@ -42,13 +43,19 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+var agenda = new Agenda({
+  db: {
+    address: process.env.mongo + '/coupons'
+  }
+});
+
 jobs.promote(610,1);
 
 router.get('/', function(req, res) {
   if (req.query.token && (req.query.token !== '')) {
     Apps.findOne({autologin:req.query.token}, function(err, a) {
       if (a) {
-        log('Создаём сессию и перебрасываем на главную');
+        log('Магазин id=' + a.insalesid + ' Создаём сессию и перебрасываем на главную');
         req.session.insalesid = a.insalesid;
         res.redirect('/');
       } else {
@@ -623,8 +630,34 @@ router.get('/data', function(req, res) {
   } else {
     res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
   }
-})
+});
 
+// создаём задания на проверку оплаты приложения
+agenda.define('check pay', function(job, done) {
+  Apps.find({enabled: true}, function(err, apps) {
+    async.each(apps, function(a, callback) {
+      jobs.create('checkpay', {
+        id: a.insalesid,
+        token: a.token,
+        insalesurl: a.insalesurl
+      }).delay(600).priority('normal').save();
+      setImmediate(callback);
+    }, function(e) {
+         if (e) {
+           log('Ошибка: ' + e, 'error');
+           setImmediate(done);
+         } else {
+           log('Созданы задания на проверку платежей');
+           setImmediate(done);
+         }
+       });
+  });
+});
+
+agenda.every('00 05 * * *', 'check pay');
+agenda.start();
+
+// проверка на новые задания
 setInterval(function() {
   Tasks.aggregate([ {
     $match: {
