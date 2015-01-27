@@ -2161,10 +2161,10 @@ var ChargesSchema = new Schema();
 ChargesSchema.add({
   insalesid        : { type: Number, index: true }, // id магазина
   guid             : { type: Number, index: true }, // id списания
-  free             : Number, // для себя, платит магазин за приложение или нет
   monthly          : String, // сумма
   till             : String, // заплачено до
   blocked          : Boolean, // заблочен за неуплату
+  expired_at       : String, // окончание триала
   updated_at       : Date, // дата из ответа insales
   created_at       : Date // дата из ответа insales
 });
