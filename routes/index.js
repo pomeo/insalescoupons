@@ -1607,13 +1607,10 @@ var Queue = {
           until: job.data.until
         }).delay(600).priority('normal').save();
         setImmediate(callback);
-      },
-      function(err) {
-        // TODO ошибку словить
-        jobs.create('create', {
-          taskid: job.data.taskid
-        }).delay(600).priority('normal').save();
-      }
+      }, function(err) {
+           // TODO ошибку err словить
+           Queue.createJobCloseTask(job.data.taskid);
+         }
     );
   },
 
