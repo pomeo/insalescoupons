@@ -1,0 +1,17 @@
+extends layout
+
+block content
+  nav.tm-navbar.uk-navbar.uk-navbar-attached
+    div.uk-container.uk-container-center.b-header
+      div.uk-navbar-brand Генератор купонов
+      ul.uk-navbar-nav
+        li.uk-active
+          a(href="/") Купоны
+        li
+          a(href="/import-export") Импорт/Экспорт
+        li
+          a(href="/zadaniya") Задания
+        li
+          a(href="/opisanie") Описание
+  div.uk-container-center.b-main
+    div.uk-alert.uk-alert-danger.uk-alert-large.uk-margin-large-top Приложение заблокировано за неуплату.
