@@ -212,6 +212,7 @@ router.post('/input', function(req, res) {
             insalesid: req.session.insalesid,
             type: 5,
             status: 1,
+            count: 0,
             created_at : new Date(),
             updated_at : new Date()
           });
@@ -230,6 +231,7 @@ router.post('/input', function(req, res) {
             type: 8,
             status: 1,
             file: 0,
+            count: 0,
             created_at : new Date(),
             updated_at : new Date()
           });
@@ -248,6 +250,7 @@ router.post('/input', function(req, res) {
             type: 6,
             status: 1,
             variant: parseInt(req.param('variants')),
+            count: 0,
             created_at : new Date(),
             updated_at : new Date()
           });
@@ -305,6 +308,7 @@ router.post('/import', function(req, res) {
         type: 7,
         status: 1,
         path: files['files[]'].path,
+        count: 0,
         created_at : new Date(),
         updated_at : new Date()
       });
@@ -510,6 +514,7 @@ router.post('/generate', function(req, res) {
                            discount: form['coupon-discount'],
                            until: form['coupon-until'],
                            group: form['coupon-group'],
+                           count: 0,
                            created_at : new Date(),
                            updated_at : new Date()
                          });
@@ -725,14 +730,42 @@ setInterval(function() {
                }
                Queue.createJobDeleteCouponsFromApp(j);
                task.status = 2;
+               task.count = 1;
                task.updated_at = new Date();
                task.save(function (err) {
                  if (err) {
-                   log('Ошибка: ' + err, 'error');
+                   log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
                  } else {
-                   log('Done');
+                   log('Магазин id=' + task.insalesid + ' Задание ушло на выволнение');
                  }
                });
+             } else if (task.status == 2) {
+               if (task.count == 3) {
+                 task.status = 3;
+                 task.message = 'произошла ошибка';
+                 task.updated_at = new Date();
+                 task.save(function (err) {
+                   if (err) {
+                     log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
+                   } else {
+                     log('Магазин id=' + task.insalesid + ' Задание закрыто, из-за лимита попыток');
+                   }
+                 });
+               } else {
+                 var hours = Math.abs(new Date() - new Date(task.updated_at)) / 36e5;
+                 if (hours > 4) {
+                   task.status = 1;
+                   task.count++;
+                   task.updated_at = new Date();
+                   task.save(function (err) {
+                   if (err) {
+                     log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
+                   } else {
+                     log('Магазин id=' + task.insalesid + ' Перезапуск задания, попытка: ' + task.count);
+                   }
+                 });
+                 }
+               }
              }
            })
          }
@@ -1951,6 +1984,7 @@ TasksSchema.add({
   discount     : String, // величина скидки
   until        : String, // срок действия купона
   group        : String, // название группы купона
+  count        : Number, // количество повторных запусков задания
   created_at   : Date,   // дата создания
   updated_at   : Date    // дата изменения
 });
