@@ -15,4 +15,10 @@ set :supervisord_stop_group, "app"
 #========================
 role :app,        "ubuntu@#{application}"
 
-after "deploy:create_symlink", "deploy:npm_install", "deploy:restart"
+namespace :deploy do
+  task :symlink, :roles => :app do
+    run "ln -nfs #{shared_path}/files #{release_path}/files"
+  end
+end
+
+after "deploy:create_symlink", "deploy:npm_install", "deploy:symlink", "deploy:restart"
