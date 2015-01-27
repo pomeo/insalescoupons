@@ -65,7 +65,7 @@ router.get('/', function(req, res) {
     });
   } else {
     var insid = req.session.insalesid || req.query.insales_id;
-    log('Попытка входа магазина: ' + insid);
+    log('Магазин id=' + insid + ' Попытка входа магазина');
     if ((req.query.insales_id &&
          (req.query.insales_id !== '')) ||
         req.session.insalesid !== undefined) {
@@ -539,7 +539,7 @@ router.post('/generate', function(req, res) {
                                if (err) {
                                  log('Магазин id=' + req.session.insalesid + ' Ошибка: ' + err, 'error');
                                } else {
-                                 log('Ok');
+                                 log('Магазин id=' + req.session.insalesid + ' Поля формы сохранены в базу приложения');
                                }
                              });
                            }
@@ -876,7 +876,7 @@ var Queue = {
         Queue.createJobDeleteCouponsFromApp(job);
         setImmediate(done);
       } else {
-        log('Удалены купоны из базы приложения');
+        log('Магазин id=' + job.data.id + ' Удалены купоны из базы приложения');
         Queue.createJobDeleteCollectionsFromApp(job);
         setImmediate(done);
       }
@@ -910,7 +910,7 @@ var Queue = {
         Queue.createJobDeleteCollectionsFromApp(job);
         setImmediate(done);
       } else {
-        log('Удалены категории из базы приложения');
+        log('Магазин id=' + job.data.id + ' Удалены категории из базы приложения');
         Queue.createJobGetCollections(job);
         setImmediate(done);
       }
@@ -919,7 +919,7 @@ var Queue = {
 
   createJobGetCollections: function(job) {
     var p = (job.data.page === undefined) ? 1 : job.data.page;
-    log('Задание на получение категорий');
+    log('Магазин id=' + job.data.id + ' Задание на получение категорий');
     jobs.create('getCollections', {
       id: job.data.id,
       taskid: job.data.taskid,
@@ -959,7 +959,7 @@ var Queue = {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              log('Заходим в функцию дёрганья категорий');
+              log('Магазин id=' + job.data.id + ' Заходим в функцию дёрганья категорий');
               if (_.isUndefined(o['collections']['collection'][0])) {
                 var coll = o['collections']['collection'];
                 var collection = new Collections({
@@ -975,7 +975,7 @@ var Queue = {
                     log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                     setImmediate(done);
                   } else {
-                    log('Сохранёна категория из магазина в базу приложения');
+                    log('Магазин id=' + job.data.id + ' Сохранена категория из магазина в базу приложения');
                     Queue.createJobGetCoupons(job);
                     setImmediate(done);
                   }
@@ -995,7 +995,7 @@ var Queue = {
                       log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                       setImmediate(callback);
                     } else {
-                      log('Сохранена категория из магазина в базу приложения');
+                      log('Магазин id=' + job.data.id + ' Сохранена категория из магазина в базу приложения');
                       setImmediate(callback);
                     }
                   });
@@ -1005,7 +1005,7 @@ var Queue = {
                        Queue.createJobGetCollections(job);
                        setImmediate(done);
                      } else {
-                       log('All collections');
+                       log('Магазин id=' + job.data.id + ' Все категории скачены из insales');
                        Queue.createJobGetCoupons(job);
                        setImmediate(done);
                      }
@@ -1023,7 +1023,7 @@ var Queue = {
 
   createJobGetCoupons: function(job) {
     var p = (job.data.page === undefined) ? 1 : job.data.page;
-    log('Задание на получение купонов');
+    log('Магазин id=' + job.data.id + ' Задание на получение купонов');
     jobs.create('get', {
       id: job.data.id,
       taskid: job.data.taskid,
@@ -1067,24 +1067,28 @@ var Queue = {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              log('Заходим в функцию дёрганья купонов');
+              log('Магазин id=' + job.data.id + ' Заходим в функцию дёрганья купонов');
               if (typeof o['discount-codes'] === 'undefined') {
                 if ((job.data.variant === 1) ||
                     (job.data.variant === 3) ||
                     (job.data.variant === 4)) {
+                  log('Магазин id=' + job.data.id + ' Уходим на удаление купонов');
                   Queue.createJobDeleteCoupons(job);
                   setImmediate(done);
                 } else if (job.data.variant === 2) {
+                  log('Магазин id=' + job.data.id + ' Уходим на создание купонов');
                   Queue.createJobCreateCoupons(job);
                   setImmediate(done);
                 } else if (job.data.type === 7) {
+                  log('Магазин id=' + job.data.id + ' Уходим на импорт файла');
                   Queue.createJobParseXLSX(job);
                   setImmediate(done);
                 } else if (job.data.type === 8) {
+                  log('Магазин id=' + job.data.id + ' Уходим на экспорт файла');
                   Queue.createExportFile(job);
                   setImmediate(done);
                 } else {
-                  log('Конец');
+                  log('Магазин id=' + job.data.id + ' Уходим на закрывание задания');
                   Queue.createJobCloseTask(job.data.taskid);
                   setImmediate(done);
                 }
@@ -1127,7 +1131,7 @@ var Queue = {
                               log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                               setImmediate(done);
                             } else {
-                              log('Сохранён купон из магазина в базу приложения');
+                              log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
                               job.data.page++;
                               Queue.createJobGetCoupons(job);
                               setImmediate(done);
@@ -1159,7 +1163,7 @@ var Queue = {
                         log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                         setImmediate(done);
                       } else {
-                        log('Сохранён купон из магазина в базу приложения');
+                        log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
                         job.data.page++;
                         Queue.createJobGetCoupons(job);
                         setImmediate(done);
@@ -1167,7 +1171,6 @@ var Queue = {
                     });
                   }
                 } else {
-                  log('Здесь');
                   async.each(o['discount-codes']['discount-code'], function(coup, callback) {
                     var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id');
                     if (!_.isEmpty(collection)) {
@@ -1205,7 +1208,7 @@ var Queue = {
                               log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                               setImmediate(callback);
                             } else {
-                              log('Сохранён купон из магазина в базу приложения');
+                              log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
                               setImmediate(callback);
                             }
                           });
@@ -1235,7 +1238,7 @@ var Queue = {
                           log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                           setImmediate(callback);
                         } else {
-                          log('Сохранён купон из магазина в базу приложения');
+                          log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
                           setImmediate(callback);
                         }
                       });
@@ -1246,7 +1249,7 @@ var Queue = {
                          Queue.createJobGetCoupons(job);
                          setImmediate(done);
                        } else {
-                         log('All coupons have been processed successfully ' + job.data.page);
+                         log('Магазин id=' + job.data.id + ' Получение купонов на странице ' + job.data.page + ' завершено');
                          job.data.page++;
                          Queue.createJobGetCoupons(job);
                          setImmediate(done);
@@ -1294,7 +1297,7 @@ var Queue = {
            if (e) {
              log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
            } else {
-             log('Задание на удаление создано');
+             log('Магазин id=' + job.data.id + ' Задание на удаление создано');
              jobs.create('deleteInsales', {
                id: job.data.id,
                taskid: job.data.taskid,
@@ -1336,7 +1339,7 @@ var Queue = {
                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                      setImmediate(done);
                    } else {
-                     log('Удалён купон из магазина и базы приложения');
+                     log('Магазин id=' + job.data.id + ' Удалён купон из магазина и базы приложения');
                      setImmediate(done);
                    }
                  });
@@ -1349,7 +1352,7 @@ var Queue = {
                    log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                    setImmediate(done);
                  } else {
-                   log('Удалён купон из магазина и базы приложения');
+                   log('Магазин id=' + job.data.id + ' Удалён купон из магазина и базы приложения');
                    setImmediate(done);
                  }
                });
@@ -1485,13 +1488,11 @@ var Queue = {
                   disabled: disabled
                 };
                 if (!_.isEqual(objectDB, objectXLSX)) {
-                  log(row['Код купона'] + ' изменён');
-                  log(objectDB);
-                  log(objectXLSX);
+                  log('Магазин id=' + job.data.id + ' Купон ' + row['Код купона'] + ' изменён');
                   jobs.create('update', objectXLSX).delay(600).priority('normal').save();
                   setImmediate(callback);
                 } else {
-                  log('Купон такой же');
+                  log('Магазин id=' + job.data.id + ' В файле xlsx и базе приложения купоны одинаковые, игнорируем изменения');
                   setImmediate(callback);
                 }
               }
@@ -1506,7 +1507,7 @@ var Queue = {
            log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
            Queue.createJobParseXLSX(job);
          } else {
-           log('All coupons have been processed successfully');
+           log('Магазин id=' + job.data.id + ' Импорт купонов завершён успешно');
            Queue.createJobCloseTask(job.data.taskid);
          }
        });
@@ -1572,7 +1573,7 @@ var Queue = {
                       log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                       setImmediate(done);
                     } else {
-                      log('Обновлён купон');
+                      log('Магазин id=' + job.data.id + ' Обновлён купон');
                       setImmediate(done);
                     }
                   });
@@ -1652,7 +1653,6 @@ var Queue = {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              log(_.isEmpty(o));
               var coupon = new Coupons({
                 insalesid           : job.data.id,
                 guid                : o['discount-code']['id'],
@@ -1675,7 +1675,7 @@ var Queue = {
                   log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                   setImmediate(done);
                 } else {
-                  log('Создан купон');
+                  log('Магазин id=' + job.data.id + ' Создан купон');
                   setImmediate(done);
                 }
               });
@@ -1783,7 +1783,7 @@ var Queue = {
                     if (e) {
                       log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
                     } else {
-                      log('Записываем xlsx файл');
+                      log('Магазин id=' + job.data.id + ' Записываем xlsx файл');
                       var path = __dirname + '/../files/' + job.data.id;
                       fs.exists(path, function(exists) {
                         if (exists) {
@@ -1803,6 +1803,7 @@ var Queue = {
                                 if (err) {
                                   log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                                 } else {
+                                  log('Магазин id=' + job.data.id + ' Файл успешно создан');
                                   Queue.createJobCloseTask(job.data.taskid);
                                 }
                               });
@@ -1876,17 +1877,17 @@ var Queue = {
       jobs.create('close', {
         taskid: taskid,
         message: undefined
-      }).priority('normal').save();
+      }).delay(600).priority('normal').save();
     } else {
       jobs.create('close', {
         taskid: taskid,
         message: message
-      }).priority('normal').save();
+      }).delay(600).priority('normal').save();
     }
   },
 
   closeTask: function(taskid, message, done) {
-    log('Закрываем таск');
+    log('Закрываем задание');
     Tasks.findById(taskid, function(err, task) {
       task.status = 3;
       task.updated_at = new Date();
@@ -1898,11 +1899,11 @@ var Queue = {
       }
       task.save(function(err) {
         if (err) {
-          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+          log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
           Queue.createJobCloseTask(taskid, message);
           setImmediate(done);
         } else {
-          log('Done');
+          log('Магазин id=' + task.insalesid + ' Задание успешно закрыто');
           setImmediate(done);
         }
       });
