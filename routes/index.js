@@ -85,7 +85,8 @@ router.get('/', function(req, res) {
                      Charges.findOne({
                        insalesid: req.session.insalesid
                      }, function(err, charge) {
-                          if (charge.blocked) {
+                          var ch = (_.isNull(charge)) ? false : charge.blocked;
+                          if (ch) {
                             res.render('block', {
                               title    : ''
                             });
@@ -142,7 +143,8 @@ router.get('/zadaniya', function(req, res) {
         Charges.findOne({
           insalesid: req.session.insalesid
         }, function(err, charge) {
-             if (charge.blocked) {
+             var ch = (_.isNull(charge)) ? false : charge.blocked;
+             if (ch) {
                res.render('block', {
                  title    : ''
                });
@@ -308,7 +310,8 @@ router.get('/import-export', function(req, res) {
         Charges.findOne({
           insalesid: req.session.insalesid
         }, function(err, charge) {
-             if (charge.blocked) {
+             var ch = (_.isNull(charge)) ? false : charge.blocked;
+             if (ch) {
                res.render('block', {
                  title    : ''
                });
@@ -451,7 +454,8 @@ router.get('/opisanie', function(req, res) {
         Charges.findOne({
           insalesid: req.session.insalesid
         }, function(err, charge) {
-             if (charge.blocked) {
+             var ch = (_.isNull(charge)) ? false : charge.blocked;
+             if (ch) {
                res.render('block', {
                  title    : ''
                });
