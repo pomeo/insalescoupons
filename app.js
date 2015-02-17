@@ -31,37 +31,29 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(cookieParser());
-// TODO: переписать покрасивее
-if (app.get('env') !== 'development') {
-  app.use(session({
-    store: new RedisStore({
-      host:process.env.redis,
-      port:6379,
-      pass:''
-    }),
-    secret: process.env.SECRET,
-    cookie: {
-      maxAge: 31536000000,
-      secure: true
-    },
-    resave: false,
-    saveUninitialized: true
-  }));
-} else {
-  app.use(session({
-    store: new RedisStore({
-      host:process.env.redis,
-      port:6379,
-      pass:''
-    }),
-    secret: process.env.SECRET,
-    cookie: {
-      secure: true
-    },
-    resave: false,
-    saveUninitialized: true
-  }));
+var sessionConfig = {
+  store: new RedisStore({
+    host:process.env.redis,
+    port:6379,
+    pass:''
+  }),
+  secret: process.env.SECRET,
+  proxy: true,
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    maxAge: null
+  },
+  resave: false,
+  saveUninitialized: true
+};
+
+if (app.get('env') !== 'production') {
+  sessionConfig.cookie.secure = false;
+  sessionConfig.cookie.maxAge = 31536000000;
 }
+
+app.use(session(sessionConfig));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bugsnag.errorHandler);
 
