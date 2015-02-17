@@ -58,7 +58,9 @@ router.get('/', function(req, res) {
         res.redirect('/');
       } else {
         log('Ошибка автологина. Неправильный token при переходе из insales', 'warn');
-        res.status(403).send('Ошибка автологина');
+        res.render('block', {
+          msg : 'Ошибка автологина'
+        });
       }
     });
   } else {
@@ -86,11 +88,10 @@ router.get('/', function(req, res) {
                           var ch = (_.isNull(charge)) ? false : charge.blocked;
                           if (ch) {
                             res.render('block', {
-                              title    : ''
+                              msg : 'Приложение заблокировано за неуплату'
                             });
                           } else {
                             res.render('index', {
-                              title    : '',
                               number   : typeof sett['coupon-number'] !== 'undefined' ? sett['coupon-number'] : 5,
                               parts    : typeof sett['coupon-parts'] !== 'undefined' ? sett['coupon-parts'] : 3,
                               length   : typeof sett['coupon-part-lengths'] !== 'undefined' ? sett['coupon-part-lengths'] : 6,
@@ -125,11 +126,15 @@ router.get('/', function(req, res) {
             }
           });
         } else {
-          res.status(403).send('Приложение не установлено для данного магазина');
+          res.render('block', {
+            msg : 'Приложение не установлено для данного магазина'
+          });
         }
       });
     } else {
-      res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+      res.render('block', {
+        msg : 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти'
+      });
     }
   }
 });
@@ -144,7 +149,7 @@ router.get('/zadaniya', function(req, res) {
              var ch = (_.isNull(charge)) ? false : charge.blocked;
              if (ch) {
                res.render('block', {
-                 title    : ''
+                 msg : 'Приложение заблокировано за неуплату'
                });
              } else {
                var T = Tasks.find({insalesid: req.session.insalesid});
@@ -210,7 +215,6 @@ router.get('/zadaniya', function(req, res) {
                    }
                  }, function(err) {
                       res.render('tasks', {
-                        title      : '',
                         _          : _,
                         tasks      : tasksList,
                         done       : tasksDone,
@@ -221,11 +225,15 @@ router.get('/zadaniya', function(req, res) {
              }
            });
       } else {
-        res.status(403).send('Приложение не установлено для данного магазина');
+        res.render('block', {
+          msg : 'Приложение не установлено для данного магазина'
+        });
       }
     })
   } else {
-    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+    res.render('block', {
+      msg : 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти'
+    });
   }
 });
 
@@ -293,11 +301,15 @@ router.post('/input', function(req, res) {
           res.status(403).send('Ошибка');
         }
       } else {
-        res.status(403).send('Приложение не установлено для данного магазина');
+        res.render('block', {
+          msg : 'Приложение не установлено для данного магазина'
+        });
       }
     })
   } else {
-    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+    res.render('block', {
+      msg : 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти'
+    });
   }
 });
 
@@ -311,20 +323,22 @@ router.get('/import-export', function(req, res) {
              var ch = (_.isNull(charge)) ? false : charge.blocked;
              if (ch) {
                res.render('block', {
-                 title    : ''
+                 msg : 'Приложение заблокировано за неуплату'
                });
              } else {
-               res.render('io', {
-                 title    : ''
-               });
+               res.render('io');
              }
            });
       } else {
-        res.status(403).send('Приложение не установлено для данного магазина');
+        res.render('block', {
+          msg : 'Приложение не установлено для данного магазина'
+        });
       }
     })
   } else {
-    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+    res.render('block', {
+      msg : 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти'
+    });
   }
 });
 
@@ -455,20 +469,22 @@ router.get('/opisanie', function(req, res) {
              var ch = (_.isNull(charge)) ? false : charge.blocked;
              if (ch) {
                res.render('block', {
-                 title    : ''
+                 msg : 'Приложение заблокировано за неуплату'
                });
              } else {
-               res.render('desc', {
-                 title    : ''
-               });
+               res.render('desc');
              }
            });
       } else {
-        res.status(403).send('Приложение не установлено для данного магазина');
+        res.render('block', {
+          msg : 'Приложение не установлено для данного магазина'
+        });
       }
     })
   } else {
-    res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
+    res.render('block', {
+      msg : 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти'
+    });
   }
 });
 
@@ -695,9 +711,9 @@ router.get('/install', function(req, res) {
         app.save(function (err) {
           if (err) {
             log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
-            res.send(err, 500);
+            res.status(500).send({ error: err });
           } else {
-            res.send(200);
+            res.sendStatus(200);
             jobs.create('sync', {
               id: req.query.insales_id
             }).delay(600).priority('normal').save();
@@ -718,9 +734,9 @@ router.get('/install', function(req, res) {
           a.save(function (err) {
             if (err) {
               log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
-              res.send(err, 500);
+              res.status(500).send({ error: err });
             } else {
-              res.send(200);
+              res.sendStatus(200);
               jobs.create('sync', {
                 id: a.insalesid
               }).delay(600).priority('normal').save();
@@ -751,9 +767,9 @@ router.get('/uninstall', function(req, res) {
         a.save(function (err) {
           if (err) {
             log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
-            res.send(err, 500);
+            res.status(500).send({ error: err });
           } else {
-            res.send(200);
+            res.sendStatus(200);
           }
         });
       } else {
