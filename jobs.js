@@ -1402,9 +1402,8 @@ jobs.process('sync', function(job) {
   // после установки первое задание на синхронизации
   var T = new Tasks({
     insalesid: job.data.id,
-    type: 8,
+    type: 5,
     status: 1,
-    file: 0,
     created_at : new Date(),
     updated_at : new Date()
   });
