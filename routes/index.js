@@ -667,7 +667,7 @@ router.get('/install', function(req, res) {
           } else {
             log('Магазин id=' + req.query.insales_id + ' Установлен');
             res.sendStatus(200);
-            jobs.create('sync', {
+            jobs.create('syncall', {
               id: req.query.insales_id
             }).delay(600).priority('normal').save();
             log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');
@@ -693,7 +693,7 @@ router.get('/install', function(req, res) {
             } else {
               log('Магазин id=' + req.query.insales_id + ' Установлен');
               res.sendStatus(200);
-              jobs.create('sync', {
+              jobs.create('syncall', {
                 id: a.insalesid
               }).delay(600).priority('normal').save();
               log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');

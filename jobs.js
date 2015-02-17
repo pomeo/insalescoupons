@@ -1398,7 +1398,7 @@ jobs.process('close', function(job, done) {
   Queue.closeTask(job.data.taskid, job.data.message, done);
 });
 
-jobs.process('sync', function(job, done) {
+jobs.process('syncall', function(job, done) {
   // после установки первое задание на синхронизации
   log('Магазин id=' + job.data.id + ' После установки первое задание на синхронизации');
   var T = new Tasks({
