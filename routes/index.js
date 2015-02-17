@@ -10,7 +10,6 @@ var express     = require('express'),
         host: process.env.redis
       }
     }),
-    Q           = require('q'),
     rest        = require('restler'),
     xml2js      = require('xml2js'),
     crypto      = require('crypto'),
