@@ -377,54 +377,6 @@ router.post('/import', function(req, res) {
   }
 });
 
-function isEven(n) {
-  return n === parseFloat(n)? !(n%2) : void 0;
-}
-
-function rowStyle(wb, odd, middle, header) {
-  var color = ((odd) ? 'E9E7E3' : 'FFFFFF');
-  var row = this;
-  row = wb.Style();
-  if (header) {
-    row.Font.Family('Arial');
-    row.Font.Size(12);
-    row.Font.WrapText(true);
-    row.Font.Alignment.Vertical('center');
-    row.Font.Alignment.Horizontal('center');
-    row.Border({
-      top:{
-        style:'thick'
-      },
-      bottom:{
-        style:'thick'
-      },
-      left:{
-        style:'thick'
-      },
-      right:{
-        style:'thick'
-      }
-    });
-  } else {
-    row.Font.Family('Arial');
-    row.Font.Size(12);
-    row.Font.WrapText(true);
-    row.Fill.Pattern('solid');
-    row.Fill.Color(color);
-    row.Font.Alignment.Vertical('center');
-    if (middle) {
-      row.Font.Alignment.Horizontal('center');
-    }
-    row.Border({
-      bottom:{
-        style:'thin',
-        color:'A0A0A4'
-      }
-    });
-  }
-  return row;
-}
-
 router.get('/export', function(req, res) {
   if (req.session.insalesid) {
     Apps.findOne({insalesid: req.session.insalesid}, function(err, app) {
