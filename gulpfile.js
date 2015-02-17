@@ -10,6 +10,7 @@ var gulp = require('gulp'),
     plumber = require('gulp-plumber'),
     nib = require('nib'),
     watch = require('gulp-watch'),
+    sourcemaps = require('gulp-sourcemaps'),
     browserSync = require('browser-sync'),
     reload = browserSync.reload;
 
