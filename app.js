@@ -43,9 +43,9 @@ var sessionConfig = {
     httpOnly: true,
     secure: true,
     maxAge: null
-  },
-  resave: false,
-  saveUninitialized: true
+  }
+  // resave: false,
+  // saveUninitialized: true
 };
 
 if (app.get('env') !== 'production') {
