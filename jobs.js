@@ -1204,7 +1204,7 @@ var Queue = {
                       log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
                     } else {
                       log('Магазин id=' + job.data.id + ' Записываем xlsx файл');
-                      var path = __dirname + '/../files/' + job.data.id;
+                      var path = __dirname + '/files/' + job.data.id;
                       fs.exists(path, function(exists) {
                         if (exists) {
                           wb.write(path + '/coupons.xlsx', function(err) {
