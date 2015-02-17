@@ -1,3 +1,4 @@
+require('strong-agent').profile();
 var mongoose    = require('mongoose'),
     Schema      = mongoose.Schema,
     kue         = require('kue'),
