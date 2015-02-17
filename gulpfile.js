@@ -34,7 +34,11 @@ gulp.task('compress', function() {
         function(files) {
           files
           .pipe(plumber())
+          .pipe(sourcemaps.init())
           .pipe(uglify())
+          .pipe(sourcemaps.write('maps', {
+            sourceMappingURLPrefix: '/js/'
+          }))
           .pipe(gulp.dest('public/js'))
           .pipe(reload({stream:true}));
         });
@@ -55,7 +59,11 @@ gulp.task('minify-css', function() {
         function(files) {
           files
           .pipe(plumber())
+          .pipe(sourcemaps.init())
           .pipe(minifyCSS())
+          .pipe(sourcemaps.write('maps'), {
+            sourceMappingURLPrefix: '/css/'
+          })
           .pipe(gulp.dest('public/css'))
           .pipe(reload({stream:true}));
         });
@@ -66,8 +74,12 @@ gulp.task('stylus', function () {
         function(files) {
           files
           .pipe(plumber())
+          .pipe(sourcemaps.init())
           .pipe(stylus({compress: true, use: nib()}))
           .pipe(prefix())
+          .pipe(sourcemaps.write('maps', {
+            sourceMappingURLPrefix: '/css/'
+          }))
           .pipe(gulp.dest('public/css'))
           .pipe(reload({stream:true}));
         });
