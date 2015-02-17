@@ -1398,7 +1398,7 @@ jobs.process('close', function(job, done) {
   Queue.closeTask(job.data.taskid, job.data.message, done);
 });
 
-jobs.process('sync', function(job) {
+jobs.process('sync', function(job, done) {
   // после установки первое задание на синхронизации
   var T = new Tasks({
     insalesid: job.data.id,
@@ -1410,8 +1410,10 @@ jobs.process('sync', function(job) {
   T.save(function (err) {
     if (err) {
       log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+      setImmediate(done);
     } else {
       log('Магазин id=' + job.data.id + ' Создано задание на синхронизацию после установки');
+      setImmediate(done);
     }
   });
 });
