@@ -665,13 +665,16 @@ router.get('/install', function(req, res) {
             log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
             res.status(500).send({ error: err });
           } else {
+            log('Магазин id=' + req.query.insales_id + ' Установлен');
             res.sendStatus(200);
             jobs.create('sync', {
               id: req.query.insales_id
             }).delay(600).priority('normal').save();
+            log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');
             jobs.create('pay', {
               id: req.query.insales_id
             }).delay(600).priority('normal').save();
+            log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на проверку оплаты');
           }
         });
       } else {
@@ -688,13 +691,16 @@ router.get('/install', function(req, res) {
               log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
               res.status(500).send({ error: err });
             } else {
+              log('Магазин id=' + req.query.insales_id + ' Установлен');
               res.sendStatus(200);
               jobs.create('sync', {
                 id: a.insalesid
               }).delay(600).priority('normal').save();
+              log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');
               jobs.create('pay', {
                 id: a.insalesid
               }).delay(600).priority('normal').save();
+              log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на проверку оплаты');
             }
           });
         }
@@ -721,6 +727,7 @@ router.get('/uninstall', function(req, res) {
             log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
             res.status(500).send({ error: err });
           } else {
+            log('Магазин id=' + req.query.insales_id + ' Удалён');
             res.sendStatus(200);
           }
         });
