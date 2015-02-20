@@ -206,7 +206,7 @@ $(document).ready(function() {
             setTimeout(function(){
               progressbar.addClass("uk-hidden");
             }, 250);
-            alert("Upload Completed")
+            $.UIkit.notify("<i class='uk-icon-check'></i> Успешно загружено и отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
           }
         };
     var select = $.UIkit.uploadSelect($("#upload-select"), settings),
