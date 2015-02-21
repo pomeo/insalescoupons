@@ -201,15 +201,15 @@ setInterval(function() {
                  var hours = Math.abs(new Date() - new Date(task.updated_at)) / 36e5;
                  if (hours > 4) {
                    task.status = 1;
-                   task.count = task.count++;
+                   task.count += 1;
                    task.updated_at = new Date();
                    task.save(function (err) {
-                   if (err) {
-                     log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-                   } else {
-                     log('Магазин id=' + task.insalesid + ' Перезапуск задания, попытка: ' + task.count);
-                   }
-                 });
+                     if (err) {
+                       log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
+                     } else {
+                       log('Магазин id=' + task.insalesid + ' Перезапуск задания, попытка: ' + task.count);
+                     }
+                   });
                  }
                }
              }
