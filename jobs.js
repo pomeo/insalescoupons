@@ -859,8 +859,8 @@ var Queue = {
               } else if (row['Один раз для каждого клиента'] == 'нет') {
                 actclient = false;
               }
-              if (_.isNumber(row['Минимальная сумма заказа'])) {
-                minprice = parseFloat(row['Минимальная сумма заказа'].replace(",",".")).toFixed(2);
+              if (_.isNumber(parseFloat(row['Минимальная сумма заказа']))) {
+                minprice = parseFloat(row['Минимальная сумма заказа'].toString().replace(",",".")).toFixed(1);
               } else {
                 minprice = null;
               }
@@ -904,7 +904,7 @@ var Queue = {
                   coupon: row['Код купона'],
                   act: act,
                   actclient: actclient,
-                  minprice: minprice,
+                  minprice: parseFloat(minprice),
                   discount: parseFloat(row['Величина скидки']).toFixed(2),
                   typediscount: type_discount,
                   until: row['Действителен по'],
@@ -969,11 +969,39 @@ var Queue = {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
             setImmediate(done);
           } else {
+            jobs.create('getCoupon', {
+              id: job.data.id,
+              guid: job.data.guid
+            }).delay(600).priority('normal').save();
+            setImmediate(done);
+          }
+        });
+      } else {
+        log('Приложение не установлено для данного магазина');
+        setImmediate(done);
+      }
+    });
+  },
+
+  getCouponFromShop: function(job, done) {
+    Apps.findOne({insalesid:job.data.id}, function(err, app) {
+      if (app.enabled == true) {
+        rest.get('http://' + process.env.insalesid + ':'
+                + app.token + '@'
+                + app.insalesurl
+                + '/admin/discount_codes/'
+                + job.data.guid
+                + '.xml', {
+                  headers: {'Content-Type': 'application/xml'}
+                }).once('complete', function(o) {
+          if (o instanceof Error) {
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
+            setImmediate(done);
+          } else {
             if (o.errors) {
               log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
               setImmediate(done);
             } else {
-              log(o);
               Coupons.findOne({guid:job.data.guid}, function(err, coupon) {
                 if (err) {
                   log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
@@ -996,7 +1024,7 @@ var Queue = {
                       log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
                       setImmediate(done);
                     } else {
-                      log('Магазин id=' + job.data.id + ' Обновлён купон');
+                      log('Магазин id=' + job.data.id + ' Получены данные купона');
                       setImmediate(done);
                     }
                   });
@@ -1151,7 +1179,7 @@ var Queue = {
                var i = 2;
                async.each(coupons, function(coup, callback) {
                  var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
-                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
+                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice.toFixed(1));
                  var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
                  var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
                  var expired = moment(new Date(coup.expired_at))
@@ -1183,7 +1211,7 @@ var Queue = {
                  .String(coup.discountcollections)
                  .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
                  ws.Cell(i,7)
-                 .String(minprice)
+                 .Number(minprice)
                  .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
                  ws.Cell(i,8)
                  .String(actclient)
@@ -1388,9 +1416,19 @@ jobs.process('get', function(job, done) {
   Queue.getCouponsFromShop(job, done);
 });
 
+jobs.process('getCoupon', function(job, done) {
+  // информация купона из магазина
+  Queue.getCouponFromShop(job, done);
+});
+
 jobs.process('create', function(job, done) {
   // создаём купоны
   Queue.createCoupons(job, done);
+});
+
+jobs.process('update', function(job, done) {
+  // обновляем купоны
+  Queue.updateCoupon(job, done);
 });
 
 jobs.process('close', function(job, done) {
