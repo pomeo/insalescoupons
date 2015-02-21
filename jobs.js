@@ -201,7 +201,7 @@ setInterval(function() {
                  var hours = Math.abs(new Date() - new Date(task.updated_at)) / 36e5;
                  if (hours > 4) {
                    task.status = 1;
-                   task.count++;
+                   task.count = task.count++;
                    task.updated_at = new Date();
                    task.save(function (err) {
                    if (err) {
