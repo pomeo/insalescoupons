@@ -1419,149 +1419,221 @@ var Queue = {
 }
 
 jobs.process('deleteApp', function(job, done) {
-  // удаляем купоны из базы приложения
-  Queue.deleteCouponsFromApp(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // удаляем купоны из базы приложения
+    Queue.deleteCouponsFromApp(job, done);
+  });
 });
 
 jobs.process('deleteCollections', function(job, done) {
-  // удаляем категорий из базы приложения
-  Queue.deleteCollectionsFromApp(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // удаляем категорий из базы приложения
+    Queue.deleteCollectionsFromApp(job, done);
+  });
 });
 
 jobs.process('getCollections', function(job, done) {
-  // достаём категории из магазина
-  Queue.getCollections(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // достаём категории из магазина
+    Queue.getCollections(job, done);
+    });
 });
 
 jobs.process('deleteInsales', function(job, done) {
-  // удаляем купоны из магазина
-  if (job.data.couponid === undefined) {
-    if (job.data.type == 6) {
-      Queue.createJobCloseTask(job.data.taskid);
-      setImmediate(done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // удаляем купоны из магазина
+    if (job.data.couponid === undefined) {
+      if (job.data.type == 6) {
+        Queue.createJobCloseTask(job.data.taskid);
+        setImmediate(done);
+      } else {
+        Queue.createJobCreateCoupons(job);
+        setImmediate(done);
+      }
     } else {
-      Queue.createJobCreateCoupons(job);
-      setImmediate(done);
+      Queue.deleteCoupons(job, done);
     }
-  } else {
-    Queue.deleteCoupons(job, done);
-  }
+  });
 });
 
 jobs.process('get', function(job, done) {
-  // достаём купоны из магазина
-  Queue.getCouponsFromShop(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // достаём купоны из магазина
+    Queue.getCouponsFromShop(job, done);
+  });
 });
 
 jobs.process('getCoupon', function(job, done) {
-  // информация купона из магазина
-  Queue.getCouponFromShop(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // информация купона из магазина
+    Queue.getCouponFromShop(job, done);
+  });
 });
 
 jobs.process('create', function(job, done) {
-  // создаём купоны
-  Queue.createCoupons(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // создаём купоны
+    Queue.createCoupons(job, done);
+  });
 });
 
 jobs.process('update', function(job, done) {
-  // обновляем купоны
-  Queue.updateCoupon(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // обновляем купоны
+    Queue.updateCoupon(job, done);
+  });
 });
 
 jobs.process('close', function(job, done) {
-  // создаём купоны
-  Queue.closeTask(job.data.taskid, job.data.message, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // создаём купоны
+    Queue.closeTask(job.data.taskid, job.data.message, done);
+  });
 });
 
 jobs.process('syncall', function(job, done) {
-  // после установки первое задание на синхронизации
-  log('Магазин id=' + job.data.id + ' После установки первое задание на синхронизации');
-  var T = new Tasks({
-    insalesid: job.data.id,
-    type: 5,
-    status: 1,
-    created_at : new Date(),
-    updated_at : new Date()
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
   });
-  T.save(function (err) {
-    if (err) {
-      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-      setImmediate(done);
-    } else {
-      log('Магазин id=' + job.data.id + ' Создано задание на синхронизацию после установки');
-      setImmediate(done);
-    }
+  domain.run(function() {
+    // после установки первое задание на синхронизации
+    log('Магазин id=' + job.data.id + ' После установки первое задание на синхронизации');
+    var T = new Tasks({
+      insalesid: job.data.id,
+      type: 5,
+      status: 1,
+      created_at : new Date(),
+      updated_at : new Date()
+    });
+    T.save(function (err) {
+      if (err) {
+        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+        setImmediate(done);
+      } else {
+        log('Магазин id=' + job.data.id + ' Создано задание на синхронизацию после установки');
+        setImmediate(done);
+      }
+    });
   });
 });
 
 jobs.process('pay', function(job, done) {
-  // после установки выставить счёт
-  Queue.pay(job, done);
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // после установки выставить счёт
+    Queue.pay(job, done);
+  });
 });
 
 jobs.process('checkpay', function(job, done) {
-  // дёргаем данные об оплате из insales
-  Charges.findOne({insalesid: job.data.id}, function(err, charge) {
-    rest.get('http://' + process.env.insalesid
-            + ':'
-            + job.data.token
-            + '@'
-            + job.data.insalesurl
-            + '/admin/recurring_application_charge.xml', {
-              headers: {'Content-Type': 'application/xml'},
-              xml2js: {
-                trim: false,
-                explicitArray: false,
-                ignoreAttrs: true
-              }
-            }).once('complete', function(o) {
-      if (o instanceof Error) {
-        log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-        setImmediate(done);
-      } else {
-        if (o.errors) {
-          log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
+  var domain = require('domain').create();
+  domain.on('error', function(err){
+    done(err);
+  });
+  domain.run(function() {
+    // дёргаем данные об оплате из insales
+    Charges.findOne({insalesid: job.data.id}, function(err, charge) {
+      rest.get('http://' + process.env.insalesid
+              + ':'
+              + job.data.token
+              + '@'
+              + job.data.insalesurl
+              + '/admin/recurring_application_charge.xml', {
+                headers: {'Content-Type': 'application/xml'},
+                xml2js: {
+                  trim: false,
+                  explicitArray: false,
+                  ignoreAttrs: true
+                }
+              }).once('complete', function(o) {
+        if (o instanceof Error) {
+          log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
           setImmediate(done);
         } else {
-          if (_.isEmpty(charge)) {
-            var p = new Charges({
-              insalesid  : job.data.id,
-              guid       : o['recurring-application-charge']['id'],
-              monthly    : o['recurring-application-charge']['monthly'],
-              till       : o['recurring-application-charge']['paid-till'],
-              created_at : o['recurring-application-charge']['created-at'],
-              updated_at : o['recurring-application-charge']['updated-at'],
-              blocked    : o['recurring-application-charge']['blocked']
-            });
-            p.save(function (err) {
-              if (err) {
-                log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                setImmediate(done);
-              } else {
-                log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
-                setImmediate(done);
-              }
-            });
+          if (o.errors) {
+            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
+            setImmediate(done);
           } else {
-            charge.guid = o['recurring-application-charge']['id'];
-            charge.monthly = o['recurring-application-charge']['monthly'];
-            charge.till = o['recurring-application-charge']['paid-till'];
-            charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
-            charge.created_at = o['recurring-application-charge']['created-at'];
-            charge.updated_at = o['recurring-application-charge']['updated-at'];
-            charge.blocked = o['recurring-application-charge']['blocked'];
-            charge.save(function (err) {
-              if (err) {
-                log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                setImmediate(done);
-              } else {
-                log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
-                setImmediate(done);
-              }
-            });
+            if (_.isEmpty(charge)) {
+              var p = new Charges({
+                insalesid  : job.data.id,
+                guid       : o['recurring-application-charge']['id'],
+                monthly    : o['recurring-application-charge']['monthly'],
+                till       : o['recurring-application-charge']['paid-till'],
+                created_at : o['recurring-application-charge']['created-at'],
+                updated_at : o['recurring-application-charge']['updated-at'],
+                blocked    : o['recurring-application-charge']['blocked']
+              });
+              p.save(function (err) {
+                if (err) {
+                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                  setImmediate(done);
+                } else {
+                  log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
+                  setImmediate(done);
+                }
+              });
+            } else {
+              charge.guid = o['recurring-application-charge']['id'];
+              charge.monthly = o['recurring-application-charge']['monthly'];
+              charge.till = o['recurring-application-charge']['paid-till'];
+              charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
+              charge.created_at = o['recurring-application-charge']['created-at'];
+              charge.updated_at = o['recurring-application-charge']['updated-at'];
+              charge.blocked = o['recurring-application-charge']['blocked'];
+              charge.save(function (err) {
+                if (err) {
+                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
+                  setImmediate(done);
+                } else {
+                  log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
+                  setImmediate(done);
+                }
+              });
+            }
           }
         }
-      }
+      });
     });
   });
 });
