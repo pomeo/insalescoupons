@@ -74,6 +74,26 @@ agenda.define('check pay', function(job, done) {
 agenda.every('0 */4 * * *', 'check pay');
 agenda.start();
 
+function Job(id, taskid, type) {
+  this.data = {
+    id: id,
+    taskid: taskid,
+    type: type,
+    path: null,
+    numbers: null,
+    parts: null,
+    length: null,
+    act: null,
+    actclient: null,
+    minprice: null,
+    variant: null,
+    typediscount: null,
+    discount: null,
+    until: null,
+    group: null
+  };
+}
+
 // проверка на новые задания
 setInterval(function() {
   Tasks.aggregate([ {
@@ -81,144 +101,140 @@ setInterval(function() {
       status: { $in : [1, 2] }
     }
   }, {
-    $sort : { created_at: 1 }
-  }, {
     $group: {
       _id: { insalesid: "$insalesid" },
-      id: { $first: "$_id" }
+      date: { $min: "$created_at" }
     }
+  }, {
+    $sort : { date: 1 }
   }], function(err, result) {
-       if (err) {
-         log('Ошибка: ' + err, 'error');
-       } else {
-         for (var i = 0; i < result.length; i++) {
-           Tasks.findById(result[i].id, function (err, task) {
-             if (task.status == 1) {
-               var j = {};
-               if ((task.type == 5) || (task.type == 8)) {
-                 j = {
-                   data: {
-                     id: task.insalesid,
-                     taskid: task._id,
-                     type: task.type,
-                     path: null,
-                     numbers: null,
-                     parts: null,
-                     length: null,
-                     act: null,
-                     actclient: null,
-                     minprice: null,
-                     variant: null,
-                     typediscount: null,
-                     discount: null,
-                     until: null,
-                     group: null
-                   }
-                 };
-               } else if (task.type == 6) {
-                 j = {
-                   data: {
-                     id: task.insalesid,
-                     taskid: task._id,
-                     type: task.type,
-                     path: null,
-                     numbers: null,
-                     parts: null,
-                     length: null,
-                     act: null,
-                     actclient: null,
-                     minprice: null,
-                     variant: task.variant,
-                     typediscount: null,
-                     discount: null,
-                     until: null,
-                     group: null
-                   }
-                 };
-               } else if (task.type == 7) {
-                 j = {
-                   data: {
-                     id: task.insalesid,
-                     taskid: task._id,
-                     type: task.type,
-                     path: task.path,
-                     numbers: null,
-                     parts: null,
-                     length: null,
-                     act: null,
-                     actclient: null,
-                     minprice: null,
-                     variant: null,
-                     typediscount: null,
-                     discount: null,
-                     until: null,
-                     group: null
-                   }
-                 };
-               } else {
-                 j = {
-                   data: {
-                     id: task.insalesid,
-                     taskid: task._id,
-                     type: task.type,
-                     path: null,
-                     numbers: task.numbers,
-                     parts: task.parts,
-                     length: task.length,
-                     act: task.act,
-                     actclient: task.actclient,
-                     minprice: task.minprice,
-                     variant: task.variant,
-                     typediscount: task.typediscount,
-                     discount: task.discount,
-                     until: task.until,
-                     group: task.group
-                   }
-                 };
-               }
-               Queue.createJobDeleteCouponsFromApp(j);
-               task.status = 2;
-               task.count = 1;
-               task.updated_at = new Date();
-               task.save(function (err) {
-                 if (err) {
-                   log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-                 } else {
-                   log('Магазин id=' + task.insalesid + ' Задание ушло на выволнение');
-                 }
-               });
-             } else if (task.status == 2) {
-               if (task.count == 3) {
-                 task.status = 3;
-                 task.message = 'произошла ошибка';
-                 task.updated_at = new Date();
-                 task.save(function (err) {
-                   if (err) {
-                     log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-                   } else {
-                     log('Магазин id=' + task.insalesid + ' Задание закрыто, из-за лимита попыток');
-                   }
-                 });
-               } else {
-                 var hours = Math.abs(new Date() - new Date(task.updated_at)) / 36e5;
-                 if (hours > 4) {
-                   task.status = 1;
-                   task.count += 1;
-                   task.updated_at = new Date();
-                   task.save(function (err) {
-                     if (err) {
-                       log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-                     } else {
-                       log('Магазин id=' + task.insalesid + ' Перезапуск задания, попытка: ' + task.count);
-                     }
-                   });
-                 }
-               }
-             }
-           })
-         }
-       }
-     });
+        if (err) {
+          log('Ошибка: ' + err, 'error');
+        } else {
+          async.eachSeries(result, function(item, done) {
+            Tasks.find({ 'insalesid': item._id.insalesid })
+            .find({ 'created_at': item.date })
+            .exec(function(err, task) {
+              if (err) {
+                log('Магазин id=' + item._id.insalesid + ' Ошибка: ' + err, 'error');
+                setImmediate(done);
+              } else {
+                if (task[0].status == 1) {
+                  if ((task[0].type == 5) || (task[0].type == 8)) {
+                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
+                    Queue.createJobDeleteCouponsFromApp(j);
+                    task[0].status = 2;
+                    task[0].count = 1;
+                    task[0].updated_at = new Date();
+                    task[0].save(function (err) {
+                      if (err) {
+                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
+                        setImmediate(done);
+                      } else {
+                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
+                        setImmediate(done);
+                      }
+                    });
+                  } else if (task[0].type == 6) {
+                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
+                    j.data.variant = task[0].variant;
+                    Queue.createJobDeleteCouponsFromApp(j);
+                    task[0].status = 2;
+                    task[0].count = 1;
+                    task[0].updated_at = new Date();
+                    task[0].save(function (err) {
+                      if (err) {
+                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
+                        setImmediate(done);
+                      } else {
+                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
+                        setImmediate(done);
+                      }
+                    });
+                  } else if (task[0].type == 7) {
+                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
+                    j.data.path = task[0].path;
+                    Queue.createJobDeleteCouponsFromApp(j);
+                    task[0].status = 2;
+                    task[0].count = 1;
+                    task[0].updated_at = new Date();
+                    task[0].save(function (err) {
+                      if (err) {
+                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
+                        setImmediate(done);
+                      } else {
+                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
+                        setImmediate(done);
+                      }
+                    });
+                  } else {
+                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
+                    j.data.numbers = task[0].numbers;
+                    j.data.parts = task[0].parts;
+                    j.data.length = task[0].length;
+                    j.data.act = task[0].act;
+                    j.data.actclient = task[0].actclient;
+                    j.data.minprice = task[0].minprice;
+                    j.data.variant = task[0].variant;
+                    j.data.typediscount = task[0].typediscount;
+                    j.data.discount = task[0].discount;
+                    j.data.until = task[0].until;
+                    j.data.group = task[0].group;
+                    Queue.createJobDeleteCouponsFromApp(j);
+                    task[0].status = 2;
+                    task[0].count = 1;
+                    task[0].updated_at = new Date();
+                    task[0].save(function (err) {
+                      if (err) {
+                        log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
+                        setImmediate(done);
+                      } else {
+                        log('Магазин id=' + task.insalesid + ' Задание ушло на выволнение');
+                        setImmediate(done);
+                      }
+                    });
+                  }
+                } else if (task[0].status == 2) {
+                  if (task[0].count == 3) {
+                    task[0].status = 3;
+                    task[0].message = 'произошла ошибка';
+                    task[0].updated_at = new Date();
+                    task[0].save(function (err) {
+                      if (err) {
+                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
+                        setImmediate(done);
+                      } else {
+                        log('Магазин id=' + task[0].insalesid + ' Задание закрыто, из-за лимита попыток');
+                        setImmediate(done);
+                      }
+                    });
+                  } else {
+                    var hours = Math.abs(new Date() - new Date(task[0].updated_at)) / 36e5;
+                    if (hours > 4) {
+                      task[0].status = 1;
+                      task[0].count += 1;
+                      task[0].updated_at = new Date();
+                      task[0].save(function (err) {
+                        if (err) {
+                          log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
+                          setImmediate(done);
+                        } else {
+                          log('Магазин id=' + task[0].insalesid + ' Перезапуск задания, попытка: ' + task[0].count);
+                          setImmediate(done);
+                        }
+                      });
+                    } else {
+                      setImmediate(done);
+                    }
+                  }
+                } else {
+                  setImmediate(done);
+                }
+              }
+            });
+          });
+        }
+      });
 }, 5000 );
 
 function isEven(n) {
