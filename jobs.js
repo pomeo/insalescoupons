@@ -47,6 +47,8 @@ var agenda = new Agenda({
 
 jobs.promote(610,1);
 
+jobs.watchStuckJobs();
+
 // создаём задания на проверку оплаты приложения
 agenda.define('check pay', function(job, done) {
   Apps.find({enabled: true}, function(err, apps) {
