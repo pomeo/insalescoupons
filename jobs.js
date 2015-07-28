@@ -69,7 +69,7 @@ agenda.define('check pay', function(job, done) {
   });
 });
 
-agenda.every('00 05 * * *', 'check pay');
+agenda.every('0 */4 * * *', 'check pay');
 agenda.start();
 
 // проверка на новые задания
