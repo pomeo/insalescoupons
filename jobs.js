@@ -372,7 +372,12 @@ var Queue = {
                 + '@'
                 + app.insalesurl
                 + '/admin/collections.xml', {
-                  headers: {'Content-Type': 'application/xml'}
+                  headers: {'Content-Type': 'application/xml'},
+                  xml2js: {
+                    trim: false,
+                    explicitArray: false,
+                    ignoreAttrs: true
+                  }
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -480,7 +485,12 @@ var Queue = {
                     page: job.data.page,
                     per_page: 250
                   },
-                  headers: {'Content-Type': 'application/xml'}
+                  headers: {'Content-Type': 'application/xml'},
+                  xml2js: {
+                    trim: false,
+                    explicitArray: false,
+                    ignoreAttrs: true
+                  }
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -749,7 +759,12 @@ var Queue = {
                 + app.insalesurl
                 + '/admin/discount_codes/'
                 + job.data.couponid + '.xml', {
-                  headers: {'Content-Type': 'application/xml'}
+                  headers: {'Content-Type': 'application/xml'},
+                  xml2js: {
+                    trim: false,
+                    explicitArray: false,
+                    ignoreAttrs: true
+                  }
                 }).once('complete', function(o) {
           if (o !== null && o.errors) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + JSON.stringify(o), 'error');
@@ -963,7 +978,12 @@ var Queue = {
                 + job.data.guid
                 + '.xml', {
                   data: coupon,
-                  headers: {'Content-Type': 'application/xml'}
+                  headers: {'Content-Type': 'application/xml'},
+                  xml2js: {
+                    trim: false,
+                    explicitArray: false,
+                    ignoreAttrs: true
+                  }
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -992,7 +1012,12 @@ var Queue = {
                 + '/admin/discount_codes/'
                 + job.data.guid
                 + '.xml', {
-                  headers: {'Content-Type': 'application/xml'}
+                  headers: {'Content-Type': 'application/xml'},
+                  xml2js: {
+                    trim: false,
+                    explicitArray: false,
+                    ignoreAttrs: true
+                  }
                 }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -1091,7 +1116,12 @@ var Queue = {
                  + app.insalesurl
                  + '/admin/discount_codes.xml', {
                    data: coupon,
-                   headers: {'Content-Type': 'application/xml'}
+                   headers: {'Content-Type': 'application/xml'},
+                   xml2js: {
+                     trim: false,
+                     explicitArray: false,
+                     ignoreAttrs: true
+                   }
                  }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -1281,7 +1311,12 @@ var Queue = {
                  + app.insalesurl
                  + '/admin/recurring_application_charge.xml', {
                    data: pay,
-                   headers: {'Content-Type': 'application/xml'}
+                   headers: {'Content-Type': 'application/xml'},
+                   xml2js: {
+                     trim: false,
+                     explicitArray: false,
+                     ignoreAttrs: true
+                   }
                  }).once('complete', function(o) {
           if (o instanceof Error) {
             log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
@@ -1471,7 +1506,12 @@ jobs.process('checkpay', function(job, done) {
             + '@'
             + job.data.insalesurl
             + '/admin/recurring_application_charge.xml', {
-              headers: {'Content-Type': 'application/xml'}
+              headers: {'Content-Type': 'application/xml'},
+              xml2js: {
+                trim: false,
+                explicitArray: false,
+                ignoreAttrs: true
+              }
             }).once('complete', function(o) {
       if (o instanceof Error) {
         log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
