@@ -7,8 +7,6 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var bugsnag = require('bugsnag');
-bugsnag.register(process.env.bugsnag);
 
 var routes = require('./routes/index');
 
@@ -24,7 +22,6 @@ if (app.get('env') !== 'development') {
 }
 app.set('trust proxy', 1);
 app.use(favicon(__dirname + '/public/favicon.ico'));
-app.use(bugsnag.requestHandler);
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -55,7 +52,6 @@ if (app.get('env') !== 'production') {
 
 app.use(session(sessionConfig));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bugsnag.errorHandler);
 
 app.use('/', routes);
 
