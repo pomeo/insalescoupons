@@ -8,8 +8,9 @@ set :application, "coupons.salesapps.ru"
 require           "capistrano-offroad"
 offroad_modules   "defaults", "supervisord"
 set :repository,  "git@github.com:pomeo/insalescoupons.git"
-set :supervisord_start_group, "app"
-set :supervisord_stop_group, "app"
+set :deploy_to,   "/home/ubuntu/projects/coupons"
+set :supervisord_start_group, "coupons"
+set :supervisord_stop_group, "coupons"
 set :shared_children, shared_children + %w{files}
 #========================
 #ROLES
@@ -23,4 +24,11 @@ namespace :deploy do
   end
 end
 
-after "deploy:create_symlink", "deploy:npm_install", "deploy:symlink_shared", "deploy:restart"
+namespace :deploy do
+  desc "Change node.js port"
+  task :chg_port do
+    run "sed -i 's/3000/12000/g' #{current_path}/app.js"
+  end
+end
+
+after "deploy:create_symlink", "deploy:npm_install", "deploy:symlink_shared", "deploy:chg_port", "deploy:restart"
