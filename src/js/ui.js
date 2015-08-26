@@ -42,9 +42,9 @@ $(document).ready(function() {
       $(form).ajaxSubmit({
         success: function (response) {
           if (response == 'success') {
-            $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+            $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {pos: 'bottom-left', timeout: 5000});
           } else {
-            $.UIkit.notify("ошибка", {status:'danger'});
+            $.UIkit.notify("Ошибка",{pos: 'bottom-left', timeout: 5000});
           }
         }
       });
@@ -55,9 +55,9 @@ $(document).ready(function() {
     $(this).ajaxSubmit({
       success: function (response) {
         if (response == 'success') {
-          $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+          $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {pos: 'bottom-left', timeout: 5000});
         } else {
-          $.UIkit.notify("ошибка", {status:'danger'});
+          $.UIkit.notify("Ошибка", {pos: 'bottom-left', timeout: 5000});
         }
       }
     });
@@ -71,9 +71,9 @@ $(document).ready(function() {
     })
     .done(function(response) {
       if (response == "success") {
-        $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+        $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {pos: 'bottom-left', timeout: 5000});
       } else {
-        $.UIkit.notify("ошибка", {status:'danger'});
+        $.UIkit.notify("Ошибка", {pos: 'bottom-left', timeout: 5000});
       }
     });
   });
@@ -85,9 +85,9 @@ $(document).ready(function() {
     })
     .done(function(response) {
       if (response == "success") {
-        $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+        $.UIkit.notify("<i class='uk-icon-check'></i> Отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {pos: 'bottom-left', timeout: 5000});
       } else {
-        $.UIkit.notify("ошибка", {status:'danger'});
+        $.UIkit.notify("Ошибка", {pos: 'bottom-left', timeout: 5000});
       }
     });
   });
@@ -206,7 +206,7 @@ $(document).ready(function() {
             setTimeout(function(){
               progressbar.addClass("uk-hidden");
             }, 250);
-            $.UIkit.notify("<i class='uk-icon-check'></i> Успешно загружено и отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {status:'success'})
+            $.UIkit.notify("<i class='uk-icon-check'></i> Успешно загружено и отправлено в очередь на выполнение.<br />Состояние можно посмотреть на странице <a href='/zadaniya'>&laquo;Задания&raquo;</a>.", {pos: 'bottom-left', timeout: 5000});
           }
         };
     var select = $.UIkit.uploadSelect($("#upload-select"), settings),
