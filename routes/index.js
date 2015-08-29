@@ -11,6 +11,7 @@ var express     = require('express'),
       }
     }),
     rest        = require('restler'),
+    push        = require('pushover-notifications'),
     xml2js      = require('xml2js'),
     crypto      = require('crypto'),
     fs          = require('fs'),
@@ -26,6 +27,11 @@ var express     = require('express'),
     winston     = require('winston'),
     formidable  = require('formidable'),
     Logentries  = require('winston-logentries');
+
+var p = new push( {
+  user: process.env.PUSHOVER_USER,
+  token: process.env.PUSHOVER_TOKEN
+});
 
 if (process.env.NODE_ENV === 'development') {
   var logger = new (winston.Logger)({
@@ -47,8 +53,6 @@ var agenda = new Agenda({
   }
 });
 
-jobs.promote(610,1);
-
 router.get('/', function(req, res) {
   if (req.query.token && (req.query.token !== '')) {
     Apps.findOne({autologin:req.query.token}, function(err, a) {
@@ -64,6 +68,9 @@ router.get('/', function(req, res) {
       }
     });
   } else {
+    if (process.env.NODE_ENV === 'development') {
+      req.session.insalesid = 74112;
+    }
     var insid = req.session.insalesid || req.query.insales_id;
     log('Магазин id=' + insid + ' Попытка входа магазина');
     if ((req.query.insales_id &&
