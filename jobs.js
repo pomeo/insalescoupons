@@ -1673,3 +1673,9 @@ function log(logMsg, logType) {
     logger.info(logMsg);
   }
 };
+
+// server with small memory, need manual release
+setInterval(function () {
+  global.gc();
+  log((process.memoryUsage().rss / 1024 / 1024).toFixed(2) + 'Mb');
+}, 10000);
