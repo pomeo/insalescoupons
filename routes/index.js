@@ -678,10 +678,21 @@ router.get('/install', function(req, res) {
               id: req.query.insales_id
             }).delay(600).priority('normal').save();
             log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');
-            jobs.create('pay', {
-              id: req.query.insales_id
-            }).delay(600).priority('normal').save();
+            // jobs.create('pay', {
+            //   id: req.query.insales_id
+            // }).delay(600).priority('normal').save();
             log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на проверку оплаты');
+            var msg = {
+              message: "+1 установка",
+              title: "Генератор купонов"
+            };
+            p.send(msg, function(err, result) {
+              if (err) {
+                log(err, 'error');
+              } else {
+                log(result);
+              }
+            });
           }
         });
       } else {
@@ -704,10 +715,21 @@ router.get('/install', function(req, res) {
                 id: a.insalesid
               }).delay(600).priority('normal').save();
               log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на синхронизацию');
-              jobs.create('pay', {
-                id: a.insalesid
-              }).delay(600).priority('normal').save();
+              // jobs.create('pay', {
+              //   id: a.insalesid
+              // }).delay(600).priority('normal').save();
               log('Магазин id=' + req.query.insales_id + ' После установки отправка задания в очередь на проверку оплаты');
+              var msg = {
+                message: "+1 установка",
+                title: "Генератор купонов"
+              };
+              p.send(msg, function(err, result) {
+                if (err) {
+                  log(err, 'error');
+                } else {
+                  log(result);
+                }
+              });
             }
           });
         }
