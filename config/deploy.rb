@@ -27,7 +27,7 @@ end
 namespace :deploy do
   desc "Change node.js port"
   task :chg_port do
-    run "sed -i 's/3000/12000/g' #{current_path}/app.js"
+    run "sed -i 's/3000/3200/g' #{current_path}/app.js"
   end
 end
 
