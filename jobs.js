@@ -1,10 +1,10 @@
-require('strong-agent').profile();
 var mongoose    = require('mongoose'),
     Schema      = mongoose.Schema,
     kue         = require('kue'),
     jobs        = kue.createQueue({
-      prefix: 'q',
+      prefix: 'coupons',
       disableSearch: true,
+      jobEvents: false,
       redis: {
         host: process.env.redis
       }
