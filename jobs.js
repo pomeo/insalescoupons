@@ -1415,7 +1415,7 @@ jobs.process('deleteApp', function(job, done) {
   });
 });
 
-jobs.process('deleteCollections', function(job, done) {
+jobs.process('deleteCollections', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1426,7 +1426,7 @@ jobs.process('deleteCollections', function(job, done) {
   });
 });
 
-jobs.process('getCollections', function(job, done) {
+jobs.process('getCollections', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1437,7 +1437,7 @@ jobs.process('getCollections', function(job, done) {
     });
 });
 
-jobs.process('deleteInsales', function(job, done) {
+jobs.process('deleteInsales', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1458,7 +1458,7 @@ jobs.process('deleteInsales', function(job, done) {
   });
 });
 
-jobs.process('get', function(job, done) {
+jobs.process('get', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1469,7 +1469,7 @@ jobs.process('get', function(job, done) {
   });
 });
 
-jobs.process('getCoupon', function(job, done) {
+jobs.process('getCoupon', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1480,7 +1480,7 @@ jobs.process('getCoupon', function(job, done) {
   });
 });
 
-jobs.process('create', function(job, done) {
+jobs.process('create', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1491,7 +1491,7 @@ jobs.process('create', function(job, done) {
   });
 });
 
-jobs.process('update', function(job, done) {
+jobs.process('update', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1502,7 +1502,7 @@ jobs.process('update', function(job, done) {
   });
 });
 
-jobs.process('close', function(job, done) {
+jobs.process('close', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1540,7 +1540,7 @@ jobs.process('syncall', function(job, done) {
   });
 });
 
-jobs.process('pay', function(job, done) {
+jobs.process('pay', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
@@ -1551,7 +1551,7 @@ jobs.process('pay', function(job, done) {
   });
 });
 
-jobs.process('checkpay', function(job, done) {
+jobs.process('checkpay', 1, function(job, done) {
   var domain = require('domain').create();
   domain.on('error', function(err){
     done(err);
