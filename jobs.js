@@ -17,7 +17,6 @@ var mongoose    = require('mongoose'),
     moment      = require('moment'),
     hat         = require('hat'),
     rack        = hat.rack(),
-    Agenda      = require('agenda'),
     async       = require('async'),
     cc          = require('coupon-code'),
     _           = require('lodash'),
@@ -41,40 +40,9 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-var agenda = new Agenda({
-  db: {
-    address: process.env.mongo + '/coupons'
-  }
-});
-
 jobs.promote(610,1);
 
 jobs.watchStuckJobs();
-
-// создаём задания на проверку оплаты приложения
-// agenda.define('check pay', function(job, done) {
-//   Apps.find({enabled: true}, function(err, apps) {
-//     async.each(apps, function(a, callback) {
-//       jobs.create('checkpay', {
-//         id: a.insalesid,
-//         token: a.token,
-//         insalesurl: a.insalesurl
-//       }).delay(600).priority('normal').save();
-//       setImmediate(callback);
-//     }, function(e) {
-//          if (e) {
-//            log('Ошибка: ' + e, 'error');
-//            setImmediate(done);
-//          } else {
-//            log('Созданы задания на проверку платежей');
-//            setImmediate(done);
-//          }
-//        });
-//   });
-// });
-
-// agenda.every('0 */4 * * *', 'check pay');
-// agenda.start();
 
 function Job(id, taskid, type) {
   this.data = {
