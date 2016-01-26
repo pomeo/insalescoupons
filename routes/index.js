@@ -78,7 +78,7 @@ router.get('/', function(req, res) {
           Settings.find({insalesid:insid}, function(err, settings) {
             if (req.session.insalesid) {
               var sett = {};
-              async.each(settings, function(s, callback) {
+              as.each(settings, function(s, callback) {
                 sett[s.property] = s.value;
                 setImmediate(callback);
               }, function(e) {
@@ -163,7 +163,7 @@ router.get('/zadaniya', function(req, res) {
                  var tasksList = [];
                  var tasksDone = [];
                  var tasksProcessing = [];
-                 async.each(tasks, function(task, callback) {
+                 as.each(tasks, function(task, callback) {
                    if (task.status == 3) {
                      if (_.isUndefined(task.message)) {
                        tasksDone.push({
