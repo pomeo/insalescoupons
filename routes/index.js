@@ -1,57 +1,54 @@
-var express     = require('express'),
-    router      = express.Router(),
-    mongoose    = require('mongoose'),
-    Schema      = mongoose.Schema,
-    kue         = require('kue'),
-    jobs        = kue.createQueue({
-      prefix: 'coupons',
-      disableSearch: true,
-      jobEvents: false,
-      redis: {
-        host: process.env.redis
-      }
-    }),
-    rest        = require('restler'),
-    push        = require('pushover-notifications'),
-    xml2js      = require('xml2js'),
-    crypto      = require('crypto'),
-    fs          = require('fs'),
-    moment      = require('moment'),
-    hat         = require('hat'),
-    rack        = hat.rack(),
-    Agenda      = require('agenda'),
-    async       = require('async'),
-    cc          = require('coupon-code'),
-    _           = require('lodash'),
-    xl          = require('excel4node'),
-    XLSX        = require('xlsx'),
-    winston     = require('winston'),
-    formidable  = require('formidable'),
-    Logentries  = require('winston-logentries');
-
-var p = new push( {
-  user: process.env.PUSHOVER_USER,
-  token: process.env.PUSHOVER_TOKEN
-});
-
-if (process.env.NODE_ENV === 'development') {
-  var logger = new (winston.Logger)({
-    transports: [
-      new (winston.transports.Console)()
-    ]
-  });
-} else {
-  var logger = new (winston.Logger)({
-    transports: [
-      new winston.transports.Logentries({token: process.env.logentries})
-    ]
-  });
-}
-
-var agenda = new Agenda({
-  db: {
-    address: process.env.mongo + '/coupons'
+'use strict';
+const express    = require('express');
+const router     = express.Router();
+const mongoose   = require('mongoose');
+const Schema     = mongoose.Schema;
+const io         = require('redis.io');
+const jobs       = io.createQueue({
+  disableSearch: true,
+  jobEvents: false,
+  redis: {
+    host: process.env.redis,
   }
+});
+const Push       = require('pushover-notifications');
+const P          = new Push( {
+  user: process.env.PUSHOVER_USER,
+  token: process.env.PUSHOVER_TOKEN,
+});
+const xml2js     = require('xml2js');
+const crypto     = require('crypto');
+const fs         = require('fs');
+const moment     = require('moment');
+const hat        = require('hat');
+const rack       = hat.rack();
+const Agenda     = require('agenda');
+const agenda     = new Agenda({
+  db: {
+    address: `${process.env.mongo}/coupons`,
+  },
+});
+const as         = require('async');
+const cc         = require('coupon-code');
+const insales    = require('insales')({
+  id: process.env.insalesid,
+  secret: process.env.insalessecret,
+});
+const _          = require('lodash');
+const xl         = require('excel4node');
+const XLSX       = require('xlsx');
+const formidable = require('formidable');
+const log        = require('winston-logs')({
+  production: {
+    logentries: {
+      token: process.env.logentries,
+    },
+  },
+  development: {
+    'console': {
+      colorize: true,
+    },
+  },
 });
 
 router.get('/', function(req, res) {
@@ -64,7 +61,7 @@ router.get('/', function(req, res) {
       } else {
         log('Ошибка автологина. Неправильный token при переходе из insales', 'warn');
         res.render('block', {
-          msg : 'Ошибка автологина'
+          msg: 'Ошибка автологина'
         });
       }
     });
@@ -73,7 +70,6 @@ router.get('/', function(req, res) {
       req.session.insalesid = 74112;
     }
     var insid = req.session.insalesid || req.query.insales_id;
-    log('Магазин id=' + insid + ' Попытка входа магазина');
     if ((req.query.insales_id &&
          (req.query.insales_id !== '')) ||
         req.session.insalesid !== undefined) {
