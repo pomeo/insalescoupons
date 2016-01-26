@@ -775,13 +775,3 @@ var Tasks = require('../models').Task;
 var Settings = require('../models').Sett;
 var Charges = require('../models').Chrg;
 var Coupons = require('../models').Coup;
-
-//Логгер в одном месте, для упрощения перезда на любой логгер.
-function log(logMsg, logType) {
-  if (logMsg instanceof Error) logger.error(logMsg.stack);
-  if (!_.isUndefined(logType)) {
-    logger.log(logType, logMsg);
-  } else {
-    logger.info(logMsg);
-  }
-};
