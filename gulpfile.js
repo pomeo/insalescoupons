@@ -38,7 +38,7 @@ gulp.task('libs', () => {
                    'node_modules/jquery-validation/dist/jquery.validate.js',
                    'node_modules/jquery-validation/dist/additional-methods.js',
                    'node_modules/jquery-form/jquery.form.js',
-                   'node_modules/jquery.event.drag/jquery.event.drag.js',
+                   'node_modules/jquery.threedubmedia/event.drag/jquery.event.drag.js',
                    'node_modules/uikit/dist/js/uikit.js',
                    'node_modules/uikit/dist/js/components/notify.js',
                    'node_modules/uikit/dist/js/components/form-select.js',
@@ -46,9 +46,9 @@ gulp.task('libs', () => {
                    'node_modules/uikit/dist/js/components/datepicker.js',
                    'node_modules/uikit/dist/js/components/autocomplete.js',
                    'node_modules/uikit/dist/js/components/tooltip.js',
-                   'node_modules/slickgrid-6pac/slick.core.js',
-                   'node_modules/slickgrid-6pac/slick.dataview.js',
-                   'node_modules/slickgrid-6pac/slick.grid.js',
+                   'node_modules/SlickGrid/slick.core.js',
+                   'node_modules/SlickGrid/slick.dataview.js',
+                   'node_modules/SlickGrid/slick.grid.js',
                    'src/js/ui.js'])
     .pipe(plumber({
       errorHandler: notify.onError("Error: <%= error.message %>"),
