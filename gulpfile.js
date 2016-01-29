@@ -116,11 +116,11 @@ gulp.task('stylus', () => {
     .pipe(plumber({
       errorHandler: notify.onError("Error: <%= error.message %>"),
     }))
-    .pipe(sourcemaps.init())
     .pipe(stylus({
       compress: false,
       use: nib(),
     }))
+    .pipe(sourcemaps.init())
     .pipe(prefix())
     .pipe(minifyCSS())
     .pipe(concat('styles.css'))
