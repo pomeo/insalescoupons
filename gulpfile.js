@@ -145,6 +145,11 @@ gulp.task('browser-sync', () => {
     open: false,
     port: 8081,
     notify: false,
+    // ws: true,
+    socket: {
+      domain: 'salesapps.dev',
+      port: 443,
+    },
   });
 });
 
