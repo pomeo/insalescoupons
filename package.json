@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node-dev app.js",
-    "job": "node-dev jobs.js"
+    "job": "node-dev jobs.js",
+    "install": "napa mleibman/SlickGrid threedubmedia/jquery.threedubmedia"
   },
   "dependencies": {
     "agenda": "^0.7.6",
@@ -19,7 +20,7 @@
     "express-session": "^1.13.0",
     "formidable": "^1.0.17",
     "hat": "0.0.3",
-    "insales": "^0.7.0",
+    "insales": "^0.8.0",
     "jade": "^1.11.0",
     "lodash": "^4.0.0",
     "moment": "^2.11.1",
@@ -51,10 +52,9 @@
     "jquery": "^2.2.0",
     "jquery-form": "^3.50.0",
     "jquery-validation": "^1.14.0",
-    "jquery.event.drag": "^2.2.2",
     "mocha": "^2.3.4",
+    "napa": "^2.2.0",
     "nib": "^1.1.0",
-    "slickgrid-6pac": "^2.2.9",
     "uikit": "^2.24.3"
   }
 }
