@@ -2,16 +2,16 @@
 const express    = require('express');
 const router     = express.Router();
 const mongoose   = require('mongoose');
-const io         = require('redis.io');
-const jobs       = io.createQueue({
+const kue        = require('kue');
+const queue      = kue.createQueue({
   disableSearch: true,
   jobEvents: false,
   redis: {
     host: process.env.redis,
   },
 });
-const Push       = require('pushover-notifications');
-const P          = new Push({
+const push       = require('pushover-notifications');
+const P          = new push({
   user: process.env.PUSHOVER_USER,
   token: process.env.PUSHOVER_TOKEN,
 });
