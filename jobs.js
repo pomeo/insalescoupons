@@ -1,54 +1,73 @@
 'use strict';
-var mongoose    = require('mongoose'),
-    Schema      = mongoose.Schema,
-    kue         = require('kue'),
-    jobs        = kue.createQueue({
-      prefix: 'coupons',
-      disableSearch: true,
-      jobEvents: false,
-      redis: {
-        host: process.env.redis
-      }
-    }),
-    rest        = require('restler'),
-    xml2js      = require('xml2js'),
-    crypto      = require('crypto'),
-    fs          = require('fs'),
-    moment      = require('moment'),
-    hat         = require('hat'),
-    rack        = hat.rack(),
-    async       = require('async'),
-    cc          = require('coupon-code'),
-    _           = require('lodash'),
-    xl          = require('excel4node'),
-    XLSX        = require('xlsx'),
-    winston     = require('winston'),
-    Logentries  = require('winston-logentries'),
-    logger;
+const mongoose = require('mongoose');
+const kue      = require('kue');
+const queue    = kue.createQueue({
+  disableSearch: true,
+  jobEvents: false,
+  redis: {
+    host: process.env.redis,
+  },
+});
+const fs       = require('fs');
+const moment   = require('moment');
+const as       = require('async');
+const cc       = require('coupon-code');
+const _        = require('lodash');
+const xl       = require('excel4node');
+const XLSX     = require('xlsx');
+const log      = require('winston-logs')(require('./log'));
+const insales  = require('insales')({
+  id: process.env.insalesid,
+  secret: process.env.insalessecret,
+});
 
-if (process.env.NODE_ENV === 'development') {
-  logger = new (winston.Logger)({
-    transports: [
-      new (winston.transports.Console)()
-    ]
+function errorNotify(params) {
+  const errid = cc.generate({
+    parts: 1,
+    partLen: 6,
   });
-} else {
-  logger = new (winston.Logger)({
-    transports: [
-      new winston.transports.Logentries({token: process.env.logentries})
-    ]
+  log.error(`ShopId=${params.id} ${errid} Error: ${JSON.stringify(params.err)}`);
+  if (params.rest) {
+    log.error(`${errid} ${params.rest}`);
+  }
+  log.error(`${errid} ${params.msg}`);
+  throw new Error(`Ошибка: #${errid}`);
+}
+
+const modelsPath = `${__dirname}/models`;
+fs.readdirSync(modelsPath).forEach(file => {
+  if (~file.indexOf('js')) {
+    require(`${modelsPath}/${file}`);
+  }
+});
+
+
+const Apps = mongoose.model('Apps');
+const Tasks = mongoose.model('Tasks');
+const Coupons = mongoose.model('Coupons');
+const Collections = mongoose.model('Collections');
+
+queue.watchStuckJobs();
+
+queue.on('error', err => {
+  log.error(`Error in kue: ${JSON.stringify(err)}`);
+});
+
+function graceful() {
+  queue.shutdown(5000, err => {
+    log.warn('Kue are shutdown', err || '');
+    process.exit(0);
   });
 }
 
-jobs.promote(610,1);
-
-jobs.watchStuckJobs();
+process.on('SIGTERM', graceful);
+process.on('SIGINT', graceful);
 
 function Job(id, taskid, type) {
   this.data = {
-    id: id,
-    taskid: taskid,
-    type: type,
+    id,
+    taskid,
+    type,
     path: null,
     numbers: null,
     parts: null,
@@ -60,160 +79,206 @@ function Job(id, taskid, type) {
     typediscount: null,
     discount: null,
     until: null,
-    group: null
+    group: null,
   };
 }
 
 // проверка на новые задания
-setInterval(function() {
-  Tasks.aggregate([ {
+setInterval(() => {
+  Tasks.aggregate([{
     $match: {
-      status: { $in : [1, 2] }
-    }
+      status: {
+        $in : [1, 2],
+      },
+    },
   }, {
     $group: {
-      _id: { insalesid: "$insalesid" },
-      date: { $min: "$created_at" }
-    }
+      _id: {
+        insalesid: '$insalesid',
+      },
+      date: {
+        $min: '$created_at',
+      },
+    },
   }, {
-    $sort : { date: 1 }
-  }], function(err, result) {
-        if (err) {
-          log('Ошибка: ' + err, 'error');
-        } else {
-          async.eachSeries(result, function(item, done) {
-            Tasks.find({ 'insalesid': item._id.insalesid })
-            .find({ 'created_at': item.date })
-            .exec(function(err, task) {
-              if (err) {
-                log('Магазин id=' + item._id.insalesid + ' Ошибка: ' + err, 'error');
-                setImmediate(done);
+    $sort : {
+      date: 1,
+    },
+  }, {
+    $limit: 1,
+  }], (err, result) => {
+    if (err) {
+      errorNotify({
+        id: 0,
+        msg: 'Error when check new tasks',
+        err,
+      });
+    } else {
+      let j = {};
+      as.eachSeries(result, (item, done) => {
+        Tasks.find({
+          insalesid: item._id.insalesid,
+        }).find({
+          created_at: item.date,
+        }).exec((err, t) => {
+          if (err) {
+            errorNotify({
+              id: item._id.insalesid,
+              msg: 'Error when check new tasks',
+              err,
+            });
+            done();
+          } else {
+            const _task = t[0];
+            if (_task.status === 1) {
+              if ((_task.type === 5) || (_task.type === 8)) {
+                j = new Job(_task.insalesid, _task._id, _task.type);
+                createJobDeleteCouponsFromApp(j);
+                _task.status = 2;
+                _task.count = 1;
+                _task.updated_at = new Date();
+                _task.save(err => {
+                  if (err) {
+                    errorNotify({
+                      id: _task.insalesid,
+                      msg: 'Error when change status to 2',
+                      err,
+                    });
+                    done();
+                  } else {
+                    log.info(`ShopId=${_task.insalesid} change status to 2 1`);
+                    done();
+                  }
+                });
+              } else if (_task.type === 6) {
+                j = new Job(_task.insalesid, _task._id, _task.type);
+                j.data.variant = _task.variant;
+                createJobDeleteCouponsFromApp(j);
+                _task.status = 2;
+                _task.count = 1;
+                _task.updated_at = new Date();
+                _task.save(err => {
+                  if (err) {
+                    errorNotify({
+                      id: _task.insalesid,
+                      msg: 'Error when change status to 2',
+                      err,
+                    });
+                    done();
+                  } else {
+                    log.info(`ShopId=${_task.insalesid} change status to 2 2`);
+                    done();
+                  }
+                });
+              } else if (_task.type === 7) {
+                j = new Job(_task.insalesid, _task._id, _task.type);
+                j.data.path = _task.path;
+                createJobDeleteCouponsFromApp(j);
+                _task.status = 2;
+                _task.count = 1;
+                _task.updated_at = new Date();
+                _task.save(err => {
+                  if (err) {
+                    errorNotify({
+                      id: _task.insalesid,
+                      msg: 'Error when change status to 2',
+                      err: err,
+                    });
+                    done();
+                  } else {
+                    log.info(`ShopId=${_task.insalesid} change status to 2 3`);
+                    done();
+                  }
+                });
               } else {
-                if (task[0].status == 1) {
-                  if ((task[0].type == 5) || (task[0].type == 8)) {
-                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
-                    Queue.createJobDeleteCouponsFromApp(j);
-                    task[0].status = 2;
-                    task[0].count = 1;
-                    task[0].updated_at = new Date();
-                    task[0].save(function (err) {
-                      if (err) {
-                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
-                      } else {
-                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
-                        setImmediate(done);
-                      }
+                j = new Job(_task.insalesid, _task._id, _task.type);
+                j.data.numbers = _task.numbers;
+                j.data.parts = _task.parts;
+                j.data.length = _task.length;
+                j.data.act = _task.act;
+                j.data.actclient = _task.actclient;
+                j.data.minprice = _task.minprice;
+                j.data.variant = _task.variant;
+                j.data.typediscount = _task.typediscount;
+                j.data.discount = _task.discount;
+                j.data.until = _task.until;
+                j.data.group = _task.group;
+                createJobDeleteCouponsFromApp(j);
+                _task.status = 2;
+                _task.count = 1;
+                _task.updated_at = new Date();
+                _task.save(err => {
+                  if (err) {
+                    errorNotify({
+                      id: _task.insalesid,
+                      msg: 'Error when change status to 2',
+                      err,
                     });
-                  } else if (task[0].type == 6) {
-                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
-                    j.data.variant = task[0].variant;
-                    Queue.createJobDeleteCouponsFromApp(j);
-                    task[0].status = 2;
-                    task[0].count = 1;
-                    task[0].updated_at = new Date();
-                    task[0].save(function (err) {
-                      if (err) {
-                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
-                      } else {
-                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
-                        setImmediate(done);
-                      }
-                    });
-                  } else if (task[0].type == 7) {
-                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
-                    j.data.path = task[0].path;
-                    Queue.createJobDeleteCouponsFromApp(j);
-                    task[0].status = 2;
-                    task[0].count = 1;
-                    task[0].updated_at = new Date();
-                    task[0].save(function (err) {
-                      if (err) {
-                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
-                      } else {
-                        log('Магазин id=' + task[0].insalesid + ' Задание ушло на выволнение');
-                        setImmediate(done);
-                      }
-                    });
+                    done();
                   } else {
-                    var j = new Job(task[0].insalesid, task[0]._id, task[0].type);
-                    j.data.numbers = task[0].numbers;
-                    j.data.parts = task[0].parts;
-                    j.data.length = task[0].length;
-                    j.data.act = task[0].act;
-                    j.data.actclient = task[0].actclient;
-                    j.data.minprice = task[0].minprice;
-                    j.data.variant = task[0].variant;
-                    j.data.typediscount = task[0].typediscount;
-                    j.data.discount = task[0].discount;
-                    j.data.until = task[0].until;
-                    j.data.group = task[0].group;
-                    Queue.createJobDeleteCouponsFromApp(j);
-                    task[0].status = 2;
-                    task[0].count = 1;
-                    task[0].updated_at = new Date();
-                    task[0].save(function (err) {
-                      if (err) {
-                        log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
-                      } else {
-                        log('Магазин id=' + task.insalesid + ' Задание ушло на выволнение');
-                        setImmediate(done);
-                      }
-                    });
+                    log.info(`ShopId=${_task.insalesid} change status to 2 4`);
+                    done();
                   }
-                } else if (task[0].status == 2) {
-                  if (task[0].count == 3) {
-                    task[0].status = 3;
-                    task[0].message = 'произошла ошибка';
-                    task[0].updated_at = new Date();
-                    task[0].save(function (err) {
-                      if (err) {
-                        log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
-                      } else {
-                        log('Магазин id=' + task[0].insalesid + ' Задание закрыто, из-за лимита попыток');
-                        setImmediate(done);
-                      }
+                });
+              }
+            } else if (_task.status === 2) {
+              if (_task.count === 3) {
+                _task.status = 3;
+                _task.message = 'произошла ошибка';
+                _task.updated_at = new Date();
+                _task.save(err => {
+                  if (err) {
+                    errorNotify({
+                      id: _task.insalesid,
+                      msg: 'Error when change status to 3',
+                      err,
                     });
+                    done();
                   } else {
-                    var hours = Math.abs(new Date() - new Date(task[0].updated_at)) / 36e5;
-                    if (hours > 4) {
-                      task[0].status = 1;
-                      task[0].count += 1;
-                      task[0].updated_at = new Date();
-                      task[0].save(function (err) {
-                        if (err) {
-                          log('Магазин id=' + task[0].insalesid + ' Ошибка: ' + err, 'error');
-                          setImmediate(done);
-                        } else {
-                          log('Магазин id=' + task[0].insalesid + ' Перезапуск задания, попытка: ' + task[0].count);
-                          setImmediate(done);
-                        }
+                    log.info(`ShopId=${_task.insalesid} Close task, limit of attempts`);
+                    done();
+                  }
+                });
+              } else {
+                const hours = Math.abs(new Date() - new Date(_task.updated_at)) / 36e5;
+                if (hours > 0.5) {
+                  _task.status = 1;
+                  _task.count += 1;
+                  _task.updated_at = new Date();
+                  _task.save(err => {
+                    if (err) {
+                      errorNotify({
+                        id: _task.insalesid,
+                        msg: `Error when rerun task, status to 1, count ${_task.count}`,
+                        err,
                       });
+                      done();
                     } else {
-                      setImmediate(done);
+                      log.info(`ShopId=${_task.insalesid} Rerun task, attempt: ${_task.count}`);
+                      done();
                     }
-                  }
+                  });
                 } else {
-                  setImmediate(done);
+                  done();
                 }
               }
-            });
-          });
-        }
+            } else {
+              done();
+            }
+          }
+        });
       });
-}, 5000 );
+    }
+  });
+}, 5000);
 
 function isEven(n) {
-  return n === parseFloat(n)? !(n%2) : void 0;
+  return n === parseFloat(n) ? !(n % 2) : void 0;
 }
 
 function rowStyle(wb, odd, middle, header) {
-  var color = ((odd) ? 'E9E7E3' : 'FFFFFF');
-  var row = this;
+  const color = ((odd) ? 'E9E7E3' : 'FFFFFF');
+  let row = this;
   row = wb.Style();
   if (header) {
     row.Font.Family('Arial');
@@ -223,17 +288,17 @@ function rowStyle(wb, odd, middle, header) {
     row.Font.Alignment.Horizontal('center');
     row.Border({
       top:{
-        style:'thick'
+        style: 'thick',
       },
       bottom:{
-        style:'thick'
+        style: 'thick',
       },
       left:{
-        style:'thick'
+        style: 'thick',
       },
       right:{
-        style:'thick'
-      }
+        style: 'thick',
+      },
     });
   } else {
     row.Font.Family('Arial');
@@ -247,9 +312,9 @@ function rowStyle(wb, odd, middle, header) {
     }
     row.Border({
       bottom:{
-        style:'thin',
-        color:'A0A0A4'
-      }
+        style: 'thin',
+        color: 'A0A0A4',
+      },
     });
   }
   return row;
@@ -259,448 +324,537 @@ function rowStyle(wb, odd, middle, header) {
 // 2 создать новые, добавив к текущим
 // 3 удалить использованные, создать новые
 // 4 удалить неиспользованные, создать новые
-var Queue = {
-  createJobDeleteCouponsFromApp: function(job) {
-    jobs.create('deleteApp', {
-      id: job.data.id,
-      taskid: job.data.taskid,
-      type: job.data.type,
-      path: job.data.path,
-      numbers: job.data.numbers,
-      parts: job.data.parts,
-      length: job.data.length,
-      act: job.data.act,
-      actclient: job.data.actclient,
-      minprice: job.data.minprice,
-      variant: job.data.variant,
-      typediscount: job.data.typediscount,
-      discount: job.data.discount,
-      until: job.data.until,
-      group: job.data.group
-    }).priority('normal').save();
-  },
 
-  deleteCouponsFromApp: function(job, done) {
-    Coupons.remove({insalesid: job.data.id}, function(err, coupon) {
-      if (err) {
-        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-        Queue.createJobDeleteCouponsFromApp(job);
-        setImmediate(done);
-      } else {
-        log('Магазин id=' + job.data.id + ' Удалены купоны из базы приложения');
-        Queue.createJobDeleteCollectionsFromApp(job);
-        setImmediate(done);
-      }
-    });
-  },
+function createJobDeleteCouponsFromApp(job) {
+  queue.create('inSales', {
+    id: job.data.id,
+    taskid: job.data.taskid,
+    type: job.data.type,
+    path: job.data.path,
+    numbers: job.data.numbers,
+    parts: job.data.parts,
+    length: job.data.length,
+    act: job.data.act,
+    actclient: job.data.actclient,
+    minprice: job.data.minprice,
+    variant: job.data.variant,
+    typediscount: job.data.typediscount,
+    discount: job.data.discount,
+    until: job.data.until,
+    group: job.data.group,
+    taskType: 2,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(10000)
+    .save();
+}
 
-  createJobDeleteCollectionsFromApp: function(job) {
-    jobs.create('deleteCollections', {
-      id: job.data.id,
-      taskid: job.data.taskid,
-      type: job.data.type,
-      path: job.data.path,
-      numbers: job.data.numbers,
-      parts: job.data.parts,
-      length: job.data.length,
-      act: job.data.act,
-      actclient: job.data.actclient,
-      minprice: job.data.minprice,
-      variant: job.data.variant,
-      typediscount: job.data.typediscount,
-      discount: job.data.discount,
-      until: job.data.until,
-      group: job.data.group
-    }).priority('normal').save();
-  },
+function deleteCouponsFromApp(job, done) {
+  Coupons.remove({
+    insalesid: job.data.id,
+  }, (err) => {
+    if (err) {
+      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+      done(err);
+    } else {
+      log.info(`Магазин id=${job.data.id} Удалены купоны из базы приложения`);
+      createJobUpdateTimeTask(job.data.taskid);
+      createJobDeleteCollectionsFromApp(job);
+      done();
+    }
+  });
+}
 
-  deleteCollectionsFromApp: function(job, done) {
-    Collections.remove({insalesid:job.data.id}, function(err, collection) {
-      if (err) {
-        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-        Queue.createJobDeleteCollectionsFromApp(job);
-        setImmediate(done);
-      } else {
-        log('Магазин id=' + job.data.id + ' Удалены категории из базы приложения');
-        Queue.createJobGetCollections(job);
-        setImmediate(done);
-      }
-    });
-  },
+function createJobDeleteCollectionsFromApp(job) {
+  queue.create('inSales', {
+    id: job.data.id,
+    taskid: job.data.taskid,
+    type: job.data.type,
+    path: job.data.path,
+    numbers: job.data.numbers,
+    parts: job.data.parts,
+    length: job.data.length,
+    act: job.data.act,
+    actclient: job.data.actclient,
+    minprice: job.data.minprice,
+    variant: job.data.variant,
+    typediscount: job.data.typediscount,
+    discount: job.data.discount,
+    until: job.data.until,
+    group: job.data.group,
+    taskType: 3,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(10000)
+    .save();
+}
 
-  createJobGetCollections: function(job) {
-    var p = (job.data.page === undefined) ? 1 : job.data.page;
-    log('Магазин id=' + job.data.id + ' Задание на получение категорий');
-    jobs.create('getCollections', {
-      id: job.data.id,
-      taskid: job.data.taskid,
-      page: p,
-      type: job.data.type,
-      path: job.data.path,
-      numbers: job.data.numbers,
-      parts: job.data.parts,
-      length: job.data.length,
-      act: job.data.act,
-      actclient: job.data.actclient,
-      minprice: job.data.minprice,
-      variant: job.data.variant,
-      typediscount: job.data.typediscount,
-      discount: job.data.discount,
-      until: job.data.until,
-      group: job.data.group
-    }).delay(600).priority('normal').save();
-  },
+function deleteCollectionsFromApp(job, done) {
+  Collections.remove({
+    insalesid: job.data.id,
+  }, (err) => {
+    if (err) {
+      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+      done(err);
+    } else {
+      log.info(`Магазин id=${job.data.id} Удалены категории из базы приложения`);
+      createJobUpdateTimeTask(job.data.taskid);
+      createJobGetCollections(job);
+      done();
+    }
+  });
+}
 
-  getCollections: function(job, done) {
-    Apps.findOne({insalesid: job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        rest.get('http://' + process.env.insalesid
-                + ':'
-                + app.token
-                + '@'
-                + app.insalesurl
-                + '/admin/collections.xml', {
-                  headers: {'Content-Type': 'application/xml'},
-                  xml2js: {
-                    trim: false,
-                    explicitArray: false,
-                    ignoreAttrs: true
-                  }
-                }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
-          } else {
-            if (o.errors) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-              setImmediate(done);
+function createJobGetCollections(job) {
+  const p = (job.data.page === undefined) ? 1 : job.data.page;
+  log.info(`Магазин id=${job.data.id} Задание на получение категорий`);
+  queue.create('inSales', {
+    id: job.data.id,
+    taskid: job.data.taskid,
+    page: p,
+    type: job.data.type,
+    path: job.data.path,
+    numbers: job.data.numbers,
+    parts: job.data.parts,
+    length: job.data.length,
+    act: job.data.act,
+    actclient: job.data.actclient,
+    minprice: job.data.minprice,
+    variant: job.data.variant,
+    typediscount: job.data.typediscount,
+    discount: job.data.discount,
+    until: job.data.until,
+    group: job.data.group,
+    taskType: 4,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(15000)
+    .save();
+}
+
+function getCollections(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      insales.listCollection({
+        token: app.token,
+        url: app.insalesurl,
+      }).then(data => {
+        const _collections = data.data;
+        log.info(`Магазин id=${job.data.id} Заходим в функцию дёрганья категорий`);
+        if (_.isUndefined(_collections.collections.collection[0])) {
+          const coll = _collections.collections.collection;
+          const collection = new Collections({
+            insalesid           : job.data.id,
+            colid               : coll.id,
+            parentid            : coll['parent-id'],
+            name                : coll.title,
+            created_at          : coll['created-at'],
+            updated_at          : coll['updated-at'],
+          });
+          collection.save(err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+              done(err);
             } else {
-              log('Магазин id=' + job.data.id + ' Заходим в функцию дёрганья категорий');
-              if (_.isUndefined(o['collections']['collection'][0])) {
-                var coll = o['collections']['collection'];
-                var collection = new Collections({
-                  insalesid           : job.data.id,
-                  colid               : coll['id'],
-                  parentid            : coll['parent-id'],
-                  name                : coll['title'],
-                  created_at          : coll['created-at'],
-                  updated_at          : coll['updated-at']
-                });
-                collection.save(function (err) {
-                  if (err) {
-                    log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                    setImmediate(done);
-                  } else {
-                    log('Магазин id=' + job.data.id + ' Сохранена категория из магазина в базу приложения');
-                    Queue.createJobGetCoupons(job);
-                    setImmediate(done);
-                  }
-                });
+              log.info(`Магазин id=${job.data.id} Сохранена категория из магазина в базу приложения`);
+              createJobGetCoupons(job);
+              createJobUpdateTimeTask(job.data.taskid);
+              done();
+            }
+          });
+        } else {
+          as.each(_collections.collections.collection, (coll, callback) => {
+            const collection = new Collections({
+              insalesid           : job.data.id,
+              colid               : coll.id,
+              parentid            : coll['parent-id'],
+              name                : coll.title,
+              created_at          : coll['created-at'],
+              updated_at          : coll['updated-at'],
+            });
+            collection.save(err => {
+              if (err) {
+                log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                callback();
               } else {
-                async.each(o['collections']['collection'], function(coll, callback) {
-                  var collection = new Collections({
+                log.info(`Магазин id=${job.data.id} Сохранена категория из магазина в базу приложения`);
+                callback();
+              }
+            });
+          }, e => {
+            if (e) {
+              log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
+              createJobGetCollections(job);
+              done(e);
+            } else {
+              log.info(`Магазин id=${job.data.id} Все категории скачены из insales`);
+              createJobGetCoupons(job);
+              createJobUpdateTimeTask(job.data.taskid);
+              done();
+            }
+          });
+        }
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+            } else {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done(err.response.statusCode);
+        }
+      });
+    }
+  });
+}
+
+function createJobGetCoupons(job) {
+  const p = (job.data.page === undefined) ? 1 : job.data.page;
+  log.info(`Магазин id=${job.data.id} Задание на получение купонов`);
+  queue.create('inSales', {
+    id: job.data.id,
+    taskid: job.data.taskid,
+    page: p,
+    type: job.data.type,
+    path: job.data.path,
+    numbers: job.data.numbers,
+    parts: job.data.parts,
+    length: job.data.length,
+    act: job.data.act,
+    actclient: job.data.actclient,
+    minprice: job.data.minprice,
+    variant: job.data.variant,
+    typediscount: job.data.typediscount,
+    discount: job.data.discount,
+    until: job.data.until,
+    group: job.data.group,
+    taskType: 6,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(15000)
+    .save();
+}
+
+function getCouponsFromShop(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      insales.listCoupon({
+        token: app.token,
+        url: app.insalesurl,
+        page: job.data.page,
+      }).then(data => {
+        const _coupons = data.data;
+        log.info(`Магазин id=${job.data.id} Заходим в функцию дёрганья купонов`);
+        if (typeof _coupons['discount-codes'] === 'undefined') {
+          if ((job.data.variant === 1) ||
+              (job.data.variant === 3) ||
+              (job.data.variant === 4)) {
+            log.info(`Магазин id=${job.data.id} Уходим на удаление купонов`);
+            createJobDeleteCoupons(job);
+            createJobUpdateTimeTask(job.data.taskid);
+            done();
+          } else if (job.data.variant === 2) {
+            log.info(`Магазин id=${job.data.id} Уходим на создание купонов`);
+            createJobCreateCoupons(job);
+            createJobUpdateTimeTask(job.data.taskid);
+            done();
+          } else if (job.data.type === 7) {
+            log.info(`Магазин id=${job.data.id} Уходим на импорт файла`);
+            createJobParseXLSX(job);
+            createJobUpdateTimeTask(job.data.taskid);
+            done();
+          } else if (job.data.type === 8) {
+            log.info(`Магазин id=${job.data.id} Уходим на экспорт файла`);
+            createExportFile(job);
+            createJobUpdateTimeTask(job.data.taskid);
+            done();
+          } else {
+            log.info(`Магазин id=${job.data.id} Уходим на закрывание задания`);
+            createJobCloseTask(job.data.taskid);
+            createJobUpdateTimeTask(job.data.taskid);
+            done();
+          }
+        } else {
+          if (_.isUndefined(_coupons['discount-codes']['discount-code'][0])) {
+            const coup = _coupons['discount-codes']['discount-code'];
+            const collection = _.map(coup['discount-collections']
+                                     ['discount-collection'], 'collection-id').join(',');
+            if (!_.isEmpty(collection)) {
+              const arr = [];
+              const C = Collections.find({
+                insalesid: job.data.id,
+              });
+              C.find({
+                colid: {
+                  $in:collection,
+                },
+              });
+              C.exec((err, collec) => {
+                if (err) {
+                  log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                  done(err);
+                } else {
+                  for (let i = 0, len = collec.length; i < len; i++) {
+                    arr.push(collec[i].name);
+                  }
+                  const coupon = new Coupons({
                     insalesid           : job.data.id,
-                    colid               : coll['id'],
-                    parentid            : coll['parent-id'],
-                    name                : coll['title'],
-                    created_at          : coll['created-at'],
-                    updated_at          : coll['updated-at']
+                    guid                : coup.id,
+                    code                : coup.code,
+                    description         : coup.description,
+                    act                 : coup['act-once'],
+                    actclient           : coup['act-once-for-client'],
+                    typeid              : coup['type-id'],
+                    discount            : coup.discount,
+                    minprice            : coup['min-price'],
+                    worked              : coup.worked,
+                    discountcollections : arr.join(',').replace(/,/g, ',\n'),
+                    collections_id      : collection,
+                    expired_at          : coup['expired-at'],
+                    created_at          : coup['created-at'],
+                    updated_at          : coup['updated-at'],
+                    disabled            : coup.disabled,
                   });
-                  collection.save(function (err) {
+                  coupon.save(err => {
                     if (err) {
-                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                      setImmediate(callback);
+                      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                      done(err);
                     } else {
-                      log('Магазин id=' + job.data.id + ' Сохранена категория из магазина в базу приложения');
-                      setImmediate(callback);
+                      log.info(`Магазин id=${job.data.id} Сохранён купон из магазина в базу приложения`);
+                      job.data.page++;
+                      createJobGetCoupons(job);
+                      createJobUpdateTimeTask(job.data.taskid);
+                      done();
                     }
                   });
-                }, function(e) {
-                     if (e) {
-                       log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
-                       Queue.createJobGetCollections(job);
-                       setImmediate(done);
-                     } else {
-                       log('Магазин id=' + job.data.id + ' Все категории скачены из insales');
-                       Queue.createJobGetCoupons(job);
-                       setImmediate(done);
-                     }
-                   });
-              }
-            }
-          }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина');
-        setImmediate(done);
-      }
-    });
-  },
-
-  createJobGetCoupons: function(job) {
-    var p = (job.data.page === undefined) ? 1 : job.data.page;
-    log('Магазин id=' + job.data.id + ' Задание на получение купонов');
-    jobs.create('get', {
-      id: job.data.id,
-      taskid: job.data.taskid,
-      page: p,
-      type: job.data.type,
-      path: job.data.path,
-      numbers: job.data.numbers,
-      parts: job.data.parts,
-      length: job.data.length,
-      act: job.data.act,
-      actclient: job.data.actclient,
-      minprice: job.data.minprice,
-      variant: job.data.variant,
-      typediscount: job.data.typediscount,
-      discount: job.data.discount,
-      until: job.data.until,
-      group: job.data.group
-    }).delay(600).priority('normal').save();
-  },
-
-  getCouponsFromShop: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        rest.get('http://' + process.env.insalesid
-                + ':'
-                + app.token
-                + '@'
-                + app.insalesurl
-                + '/admin/discount_codes.xml', {
-                  query: {
-                    page: job.data.page,
-                    per_page: 250
-                  },
-                  headers: {'Content-Type': 'application/xml'},
-                  xml2js: {
-                    trim: false,
-                    explicitArray: false,
-                    ignoreAttrs: true
-                  }
-                }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
-          } else {
-            if (o.errors) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-              setImmediate(done);
-            } else {
-              log('Магазин id=' + job.data.id + ' Заходим в функцию дёрганья купонов');
-              if (typeof o['discount-codes'] === 'undefined') {
-                if ((job.data.variant === 1) ||
-                    (job.data.variant === 3) ||
-                    (job.data.variant === 4)) {
-                  log('Магазин id=' + job.data.id + ' Уходим на удаление купонов');
-                  Queue.createJobDeleteCoupons(job);
-                  setImmediate(done);
-                } else if (job.data.variant === 2) {
-                  log('Магазин id=' + job.data.id + ' Уходим на создание купонов');
-                  Queue.createJobCreateCoupons(job);
-                  setImmediate(done);
-                } else if (job.data.type === 7) {
-                  log('Магазин id=' + job.data.id + ' Уходим на импорт файла');
-                  Queue.createJobParseXLSX(job);
-                  setImmediate(done);
-                } else if (job.data.type === 8) {
-                  log('Магазин id=' + job.data.id + ' Уходим на экспорт файла');
-                  Queue.createExportFile(job);
-                  setImmediate(done);
-                } else {
-                  log('Магазин id=' + job.data.id + ' Уходим на закрывание задания');
-                  Queue.createJobCloseTask(job.data.taskid);
-                  setImmediate(done);
                 }
-              } else {
-                if (_.isUndefined(o['discount-codes']['discount-code'][0])) {
-                  var coup = o['discount-codes']['discount-code'];
-                  var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id').join(',');
-                  if (!_.isEmpty(collection)) {
-                      var arr = [];
-                      var C = Collections.find({insalesid:job.data.id});
-                      C.find({'colid': {$in:collection}});
-                      C.exec(function(err, collec) {
-                        if (err) {
-                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                          setImmediate(done);
-                        } else {
-                          for (var i = 0, len = collec.length; i < len; i++) {
-                            arr.push(collec[i].name);
-                          }
-                          var coupon = new Coupons({
-                            insalesid           : job.data.id,
-                            guid                : coup['id'],
-                            code                : coup['code'],
-                            description         : coup['description'],
-                            act                 : coup['act-once'],
-                            actclient           : coup['act-once-for-client'],
-                            typeid              : coup['type-id'],
-                            discount            : coup['discount'],
-                            minprice            : coup['min-price'],
-                            worked              : coup['worked'],
-                            discountcollections : arr.join(',').replace( /,/g,',\n'),
-                            collections_id      : collection,
-                            expired_at          : coup['expired-at'],
-                            created_at          : coup['created-at'],
-                            updated_at          : coup['updated-at'],
-                            disabled            : coup['disabled']
-                          });
-                          coupon.save(function (err) {
-                            if (err) {
-                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                              setImmediate(done);
-                            } else {
-                              log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
-                              job.data.page++;
-                              Queue.createJobGetCoupons(job);
-                              setImmediate(done);
-                            }
-                          });
-                        }
-                      });
+              });
+            } else {
+              const coupon = new Coupons({
+                insalesid           : job.data.id,
+                guid                : coup.id,
+                code                : coup.code,
+                description         : coup.description,
+                act                 : coup['act-once'],
+                actclient           : coup['act-once-for-client'],
+                typeid              : coup['type-id'],
+                discount            : coup.discount,
+                minprice            : coup['min-price'],
+                worked              : coup.worked,
+                discountcollections : 'Все',
+                collections_id      : '',
+                expired_at          : coup['expired-at'],
+                created_at          : coup['created-at'],
+                updated_at          : coup['updated-at'],
+                disabled            : coup.disabled,
+              });
+              coupon.save(err => {
+                if (err) {
+                  log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                  done(err);
+                } else {
+                  log.info(`Магазин id=${job.data.id} Сохранён купон из магазина в базу приложения`);
+                  job.data.page++;
+                  createJobGetCoupons(job);
+                  createJobUpdateTimeTask(job.data.taskid);
+                  done();
+                }
+              });
+            }
+          } else {
+            as.each(_coupons['discount-codes']['discount-code'], (coup, callback) => {
+              const collection = _.map(coup['discount-collections']
+                                     ['discount-collection'], 'collection-id');
+              if (!_.isEmpty(collection)) {
+                const arr = [];
+                const C = Collections.find({
+                  insalesid: job.data.id,
+                });
+                C.find({
+                  colid: {
+                    $in:collection,
+                  },
+                });
+                C.exec((err, collec) => {
+                  if (err) {
+                    log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                    callback();
                   } else {
-                    var coupon = new Coupons({
+                    for (let i = 0, len = collec.length; i < len; i++) {
+                      arr.push(collec[i].name);
+                    }
+                    const coupon = new Coupons({
                       insalesid           : job.data.id,
-                      guid                : coup['id'],
-                      code                : coup['code'],
-                      description         : coup['description'],
+                      guid                : coup.id,
+                      code                : coup.code,
+                      description         : coup.description,
                       act                 : coup['act-once'],
                       actclient           : coup['act-once-for-client'],
                       typeid              : coup['type-id'],
-                      discount            : coup['discount'],
+                      discount            : coup.discount,
                       minprice            : coup['min-price'],
-                      worked              : coup['worked'],
-                      discountcollections : 'Все',
-                      collections_id      : '',
+                      worked              : coup.worked,
+                      discountcollections : arr.join(',').replace(/,/g, ',\n'),
+                      collections_id      : collection.join(','),
                       expired_at          : coup['expired-at'],
                       created_at          : coup['created-at'],
                       updated_at          : coup['updated-at'],
-                      disabled            : coup['disabled']
+                      disabled            : coup.disabled,
                     });
-                    coupon.save(function (err) {
+                    coupon.save(err => {
                       if (err) {
-                        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                        setImmediate(done);
+                        log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                        callback();
                       } else {
-                        log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
-                        job.data.page++;
-                        Queue.createJobGetCoupons(job);
-                        setImmediate(done);
+                        log.info(`Магазин id=${job.data.id} Сохранён купон из магазина в базу приложения`);
+                        callback();
                       }
                     });
                   }
-                } else {
-                  async.each(o['discount-codes']['discount-code'], function(coup, callback) {
-                    var collection = _.map(coup['discount-collections']['discount-collection'], 'collection-id');
-                    if (!_.isEmpty(collection)) {
-                      var arr = [];
-                      var C = Collections.find({insalesid:job.data.id});
-                      C.find({'colid': {$in:collection}});
-                      C.exec(function(err, collec) {
-                        if (err) {
-                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                          setImmediate(callback);
-                        } else {
-                          for (var i = 0, len = collec.length; i < len; i++) {
-                            arr.push(collec[i].name);
-                          }
-                          var coupon = new Coupons({
-                            insalesid           : job.data.id,
-                            guid                : coup['id'],
-                            code                : coup['code'],
-                            description         : coup['description'],
-                            act                 : coup['act-once'],
-                            actclient           : coup['act-once-for-client'],
-                            typeid              : coup['type-id'],
-                            discount            : coup['discount'],
-                            minprice            : coup['min-price'],
-                            worked              : coup['worked'],
-                            discountcollections : arr.join(',').replace( /,/g,',\n'),
-                            collections_id      : collection.join(','),
-                            expired_at          : coup['expired-at'],
-                            created_at          : coup['created-at'],
-                            updated_at          : coup['updated-at'],
-                            disabled            : coup['disabled']
-                          });
-                          coupon.save(function (err) {
-                            if (err) {
-                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                              setImmediate(callback);
-                            } else {
-                              log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
-                              setImmediate(callback);
-                            }
-                          });
-                        }
-                      });
-                    } else {
-                      var coupon = new Coupons({
-                        insalesid           : job.data.id,
-                        guid                : coup['id'],
-                        code                : coup['code'],
-                        description         : coup['description'],
-                        act                 : coup['act-once'],
-                        actclient           : coup['act-once-for-client'],
-                        typeid              : coup['type-id'],
-                        discount            : coup['discount'],
-                        minprice            : coup['min-price'],
-                        worked              : coup['worked'],
-                        discountcollections : 'Все',
-                        collections_id      : '',
-                        expired_at          : coup['expired-at'],
-                        created_at          : coup['created-at'],
-                        updated_at          : coup['updated-at'],
-                        disabled            : coup['disabled']
-                      });
-                      coupon.save(function (err) {
-                        if (err) {
-                          log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                          setImmediate(callback);
-                        } else {
-                          log('Магазин id=' + job.data.id + ' Сохранён купон из магазина в базу приложения');
-                          setImmediate(callback);
-                        }
-                      });
-                    }
-                  }, function(e) {
-                       if (e) {
-                         log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
-                         Queue.createJobGetCoupons(job);
-                         setImmediate(done);
-                       } else {
-                         log('Магазин id=' + job.data.id + ' Получение купонов на странице ' + job.data.page + ' завершено');
-                         job.data.page++;
-                         Queue.createJobGetCoupons(job);
-                         setImmediate(done);
-                       }
-                     });
-                }
+                });
+              } else {
+                const coupon = new Coupons({
+                  insalesid           : job.data.id,
+                  guid                : coup.id,
+                  code                : coup.code,
+                  description         : coup.description,
+                  act                 : coup['act-once'],
+                  actclient           : coup['act-once-for-client'],
+                  typeid              : coup['type-id'],
+                  discount            : coup.discount,
+                  minprice            : coup['min-price'],
+                  worked              : coup.worked,
+                  discountcollections : 'Все',
+                  collections_id      : '',
+                  expired_at          : coup['expired-at'],
+                  created_at          : coup['created-at'],
+                  updated_at          : coup['updated-at'],
+                  disabled            : coup.disabled,
+                });
+                coupon.save(err => {
+                  if (err) {
+                    log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                    callback();
+                  } else {
+                    log.info(`Магазин id=${job.data.id} Сохранён купон из магазина в базу приложения`);
+                    callback();
+                  }
+                });
               }
-            }
+            }, e => {
+              if (e) {
+                log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
+                done(e);
+              } else {
+                log.info(`Магазин id=${job.data.id} Получение купонов на странице ${job.data.page} завершено`);
+                job.data.page++;
+                createJobGetCoupons(job);
+                createJobUpdateTimeTask(job.data.taskid);
+                done();
+              }
+            });
           }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина');
-        setImmediate(done);
-      }
-    });
-  },
-
-  createJobDeleteCoupons: function(job) {
-    var C = Coupons.find({insalesid: job.data.id});
-    if (job.data.variant == 3) {
-      C.and([{'worked': false}, {'disabled': false}]);
-    } else if (job.data.variant == 4) {
-      C.and([{'worked': true}, {'disabled': false}]);
+        }
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+            } else {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done(err.response.statusCode);
+        }
+      });
+    } else {
+      log.warn(`Приложение не установлено для данного магазина`);
+      done();
     }
-    C.exec(function(err, coupons) {
-      async.each(coupons, function(coup, callback) {
-        jobs.create('deleteInsales', {
+  });
+}
+
+function createJobDeleteCoupons(job) {
+  const C = Coupons.find({
+    insalesid: job.data.id,
+  });
+  if (job.data.variant === 3) {
+    C.and([{
+      worked: false,
+    }, {
+      disabled: false,
+    }]);
+  } else if (job.data.variant === 4) {
+    C.and([{
+      worked: true,
+    }, {
+      disabled: false,
+    }]);
+  }
+  C.exec((err, coupons) => {
+    as.each(coupons, (coup, callback) => {
+      queue.create('inSales', {
+        id: job.data.id,
+        taskid: job.data.taskid,
+        couponid: coup.guid,
+        type: job.data.type,
+        numbers: job.data.numbers,
+        parts: job.data.parts,
+        length: job.data.length,
+        act: job.data.act,
+        actclient: job.data.actclient,
+        minprice: job.data.minprice,
+        variant: job.data.variant,
+        typediscount: job.data.typediscount,
+        discount: job.data.discount,
+        until: job.data.until,
+        taskType: 5,
+      }).attempts(3)
+        .priority('normal')
+        .removeOnComplete(true)
+        .ttl(15000)
+        .save();
+      callback();
+    }, e => {
+      if (e) {
+        log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
+      } else {
+        log.info(`Магазин id=${job.data.id} Задание на удаление создано`);
+        queue.create('inSales', {
           id: job.data.id,
           taskid: job.data.taskid,
-          couponid: coup.guid,
           type: job.data.type,
           numbers: job.data.numbers,
           parts: job.data.parts,
@@ -711,934 +865,866 @@ var Queue = {
           variant: job.data.variant,
           typediscount: job.data.typediscount,
           discount: job.data.discount,
-          until: job.data.until
-        }).delay(600).priority('normal').save();
-        setImmediate(callback);
-      }, function(e) {
-           if (e) {
-             log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
-           } else {
-             log('Магазин id=' + job.data.id + ' Задание на удаление создано');
-             jobs.create('deleteInsales', {
-               id: job.data.id,
-               taskid: job.data.taskid,
-               type: job.data.type,
-               numbers: job.data.numbers,
-               parts: job.data.parts,
-               length: job.data.length,
-               act: job.data.act,
-               actclient: job.data.actclient,
-               minprice: job.data.minprice,
-               variant: job.data.variant,
-               typediscount: job.data.typediscount,
-               discount: job.data.discount,
-               until: job.data.until
-             }).delay(600).priority('normal').save();
-           }
-         });
-    });
-  },
-
-  deleteCoupons: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        rest.del('http://' + process.env.insalesid + ':'
-                + app.token + '@'
-                + app.insalesurl
-                + '/admin/discount_codes/'
-                + job.data.couponid + '.xml', {
-                  headers: {'Content-Type': 'application/xml'},
-                  xml2js: {
-                    trim: false,
-                    explicitArray: false,
-                    ignoreAttrs: true
-                  }
-                }).once('complete', function(o) {
-          if (o !== null && o.errors) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + JSON.stringify(o), 'error');
-            var re = new RegExp(job.data.couponid,"g");
-            if (o.errors.error.match(re)) {
-              Coupons.findOneAndRemove({
-                guid: job.data.couponid
-              }, function (err, r){
-                   if (err) {
-                     log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                     setImmediate(done);
-                   } else {
-                     log('Магазин id=' + job.data.id + ' Удалён купон из магазина и базы приложения');
-                     setImmediate(done);
-                   }
-                 });
-            }
-          } else {
-            Coupons.findOneAndRemove({
-              guid: job.data.couponid
-            }, function (err, r){
-                 if (err) {
-                   log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                   setImmediate(done);
-                 } else {
-                   log('Магазин id=' + job.data.id + ' Удалён купон из магазина и базы приложения');
-                   setImmediate(done);
-                 }
-               });
-          }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина', 'warn');
-        setImmediate(done);
+          until: job.data.until,
+          taskType: 5,
+        }).attempts(3)
+          .priority('normal')
+          .removeOnComplete(true)
+          .ttl(15000)
+          .save();
+        createJobUpdateTimeTask(job.data.taskid);
       }
     });
-  },
+  });
+}
 
-  createJobParseXLSX: function(job) {
-    var iter = 1;
-    var error = 0;
-    var workbook = XLSX.readFile(job.data.path);
-    var sheet = XLSX.utils.sheet_to_row_object_array(workbook.Sheets['Купоны']);
-    async.each(sheet, function(row, callback) {
-      if (error == 0) {
-        iter++;
-        if (_.isUndefined(row['Код купона'])) {
-          var message = 'Ошибка в ячейке A' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
-        } else if (_.isUndefined(row['Тип купона'])) {
-          var message = 'Ошибка в ячейке B' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
-        } else if (_.isUndefined(row['Тип скидки'])) {
-          var message = 'Ошибка в ячейке C' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
-        } else if (_.isUndefined(row['Величина скидки'])) {
-          var message = 'Ошибка в ячейке D' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
-        } else if (_.isUndefined(row['Один раз для каждого клиента'])) {
-          var message = 'Ошибка в ячейке H' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
-        } else if (_.isUndefined(row['Заблокирован'])) {
-          var message = 'Ошибка в ячейке J' + iter;
-          error = 1;
-          Queue.createJobCloseTask(job.data.taskid, message);
-          setImmediate(callback);
+function deleteCoupons(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      insales.removeCoupon({
+        token: app.token,
+        url: app.insalesurl,
+        couponid: job.data.couponid,
+      }).then(data => {
+        const _output = data.data;
+        if (_output !== null && _output.errors) {
+          log.error(`Магазин id=${job.data.id} Ошибка: ${JSON.stringify(_output)}`);
+          const re = new RegExp(job.data.couponid, 'g');
+          if (_output.errors.error.match(re)) {
+            Coupons.findOneAndRemove({
+              guid: job.data.couponid,
+            }, (err, r) => {
+              if (err) {
+                log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                done(err);
+              } else {
+                log.info(`Магазин id=${job.data.id} Удалён купон из магазина и базы приложения id=${job.data.couponid}`);
+                done();
+              }
+            });
+          }
         } else {
-          var C = Coupons.find({insalesid:job.data.id});
-          C.find({code:row['Код купона']});
-          C.exec(function(err, coupon) {
+          Coupons.findOneAndRemove({
+            guid: job.data.couponid,
+          }, (err, r) => {
             if (err) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-              setImmediate(callback);
+              log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+              done(err);
             } else {
-              var type_discount = '';
-              var minprice = '';
-              var act = '';
-              var actclient = '';
-              var disabled = '';
-              if (row['Тип скидки'] == 'процент') {
-                type_discount = 1;
-              } else if (row['Тип скидки'] == 'денежная величина') {
-                type_discount = 2;
-              }
-              if (row['Тип купона'] == 'одноразовый') {
-                act = true;
-              } else if (row['Тип купона'] == 'многоразовый') {
-                act = false;
-              }
-              if (row['Заблокирован'] == 'да') {
-                disabled = true;
-              } else if (row['Заблокирован'] == 'нет') {
-                disabled = false;
-              }
-              if (row['Один раз для каждого клиента'] == 'да') {
-                actclient = true;
-              } else if (row['Один раз для каждого клиента'] == 'нет') {
-                actclient = false;
-              }
-              if (_.isNumber(parseFloat(row['Минимальная сумма заказа']))) {
-                minprice = parseFloat(row['Минимальная сумма заказа'].toString().replace(",",".")).toFixed(1);
-              } else {
-                minprice = null;
-              }
-              if (_.isUndefined(coupon[0])) {
-                jobs.create('create', {
-                  id: job.data.id,
-                  taskid: job.data.taskid,
-                  type: 2,
-                  coupon: row['Код купона'],
-                  desc: row['Описание'],
-                  act: act,
-                  actclient: actclient,
-                  minprice: minprice,
-                  discount: row['Величина скидки'].toFixed(2),
-                  typediscount: type_discount,
-                  until: row['Действителен по'],
-                  disabled: disabled
-                }).delay(600).priority('normal').save();
-                setImmediate(callback);
-              } else {
-                var objectDB = {
-                  id: job.data.id,
-                  taskid: job.data.taskid,
-                  guid: coupon[0].guid,
-                  type: 2,
-                  coupon: coupon[0].code,
-                  act: coupon[0].act,
-                  actclient: coupon[0].actclient,
-                  minprice: coupon[0].minprice,
-                  discount: parseFloat(coupon[0].discount).toFixed(2),
-                  typediscount: coupon[0].typeid,
-                  until: moment(coupon[0].expired_at)
-                         .format('DD-MM-YYYY'),
-                  disabled: coupon[0].disabled
-                };
-                var objectXLSX = {
-                  id: job.data.id,
-                  taskid: job.data.taskid,
-                  guid: coupon[0].guid,
-                  type: 2,
-                  coupon: row['Код купона'],
-                  act: act,
-                  actclient: actclient,
-                  minprice: parseFloat(minprice),
-                  discount: parseFloat(row['Величина скидки']).toFixed(2),
-                  typediscount: type_discount,
-                  until: row['Действителен по'],
-                  disabled: disabled
-                };
-                if (!_.isEqual(objectDB, objectXLSX)) {
-                  log('Магазин id=' + job.data.id + ' Купон ' + row['Код купона'] + ' изменён');
-                  jobs.create('update', objectXLSX).delay(600).priority('normal').save();
-                  setImmediate(callback);
-                } else {
-                  log('Магазин id=' + job.data.id + ' В файле xlsx и базе приложения купоны одинаковые, игнорируем изменения');
-                  setImmediate(callback);
-                }
-              }
+              log.info(`Магазин id=${job.data.id} Удалён купон из магазина и базы приложения id=${job.data.couponid}`);
+              done();
             }
           });
         }
-      } else {
-        setImmediate(callback);
-      }
-    }, function(e) {
-         if (e) {
-           log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
-           Queue.createJobParseXLSX(job);
-         } else {
-           log('Магазин id=' + job.data.id + ' Импорт купонов завершён успешно');
-           Queue.createJobCloseTask(job.data.taskid);
-         }
-       });
-  },
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+            } else {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done();
+        }
+      });
+    } else {
+      log.warn(`Приложение не установлено для данного магазина`);
+      done();
+    }
+  });
+}
 
-  updateCoupon: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        var desc = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
-        var disb = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
-        var minprice = (_.isUndefined(job.data.minprice) || (job.data.minprice == 0) || (_.isNull(job.data.minprice))) ? '' : '<min-price>' + job.data.minprice + '</min-price>';
-        var actclient = (_.isUndefined(job.data.actclient) || (job.data.actclient == '')) ? '<act_once_for_client>0</act_once_for_client>' : '<act_once_for_client>1</act_once_for_client>';
-        var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
-                   + '<discount_code>'
-                   + '<code>' + job.data.coupon + '</code>'
-                   + '<act_once>' + job.data.act + '</act_once>'
-                   + minprice
-                   + actclient
-                   + '<discount>' + job.data.discount + '</discount>'
-                   + '<type_id>' + job.data.typediscount + '</type_id>'
-                   + '<description>' + desc + '</description>'
-                   + '<disabled>' + disb + '</disabled>'
-                   + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
-                                      .format('YYYY-MM-DD') + '</expired-at>'
-                   + '</discount_code>';
-        rest.put('http://' + process.env.insalesid + ':'
-                + app.token + '@'
-                + app.insalesurl
-                + '/admin/discount_codes/'
-                + job.data.guid
-                + '.xml', {
-                  data: coupon,
-                  headers: {'Content-Type': 'application/xml'},
-                  xml2js: {
-                    trim: false,
-                    explicitArray: false,
-                    ignoreAttrs: true
-                  }
-                }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
+function createJobParseXLSX(job) {
+  let iter = 1;
+  let error = 0;
+  const workbook = XLSX.readFile(job.data.path);
+  const sheet = XLSX.utils.sheet_to_row_object_array(workbook.Sheets['Купоны']);
+  as.each(sheet, (row, callback) => {
+    if (error === 0) {
+      iter++;
+      let message = '';
+      if (_.isUndefined(row['Код купона'])) {
+        message = `Ошибка в ячейке A ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else if (_.isUndefined(row['Тип купона'])) {
+        message = `Ошибка в ячейке B ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else if (_.isUndefined(row['Тип скидки'])) {
+        message = `Ошибка в ячейке C ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else if (_.isUndefined(row['Величина скидки'])) {
+        message = `Ошибка в ячейке D ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else if (_.isUndefined(row['Один раз для каждого клиента'])) {
+        message = `Ошибка в ячейке H ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else if (_.isUndefined(row['Заблокирован'])) {
+        message = `Ошибка в ячейке J ${iter}`;
+        error = 1;
+        createJobCloseTask(job.data.taskid, message);
+        callback();
+      } else {
+        const C = Coupons.find({
+          insalesid: job.data.id,
+        });
+        C.find({
+          code: row['Код купона'],
+        });
+        C.exec((err, coupon) => {
+          if (err) {
+            log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+            callback();
           } else {
-            jobs.create('getCoupon', {
-              id: job.data.id,
-              guid: job.data.guid
-            }).delay(600).priority('normal').save();
-            setImmediate(done);
+            let typeDiscount = '';
+            let minprice = '';
+            let act = '';
+            let actclient = '';
+            let disabled = '';
+            if (row['Тип скидки'] === 'процент') {
+              typeDiscount = 1;
+            } else if (row['Тип скидки'] === 'денежная величина') {
+              typeDiscount = 2;
+            }
+            if (row['Тип купона'] === 'одноразовый') {
+              act = 1;
+            } else if (row['Тип купона'] === 'многоразовый') {
+              act = 0;
+            }
+            if (row['Заблокирован'] === 'да') {
+              disabled = true;
+            } else if (row['Заблокирован'] === 'нет') {
+              disabled = false;
+            }
+            if (row['Один раз для каждого клиента'] === 'да') {
+              actclient = true;
+            } else if (row['Один раз для каждого клиента'] === 'нет') {
+              actclient = false;
+            }
+            if (_.isNumber(parseFloat(row['Минимальная сумма заказа']))) {
+              minprice = parseFloat(row['Минимальная сумма заказа'].toString().replace(',', '.')).toFixed(1);
+            } else {
+              minprice = null;
+            }
+            if (_.isUndefined(coupon[0])) {
+              queue.create('inSales', {
+                id: job.data.id,
+                taskid: job.data.taskid,
+                type: 2,
+                coupon: row['Код купона'],
+                desc: row['Описание'],
+                act,
+                actclient,
+                minprice,
+                discount: parseFloat(row['Величина скидки']).toFixed(2),
+                typediscount: typeDiscount,
+                until: row['Действителен по'],
+                disabled,
+                taskType: 8,
+              }).attempts(3)
+                .priority('normal')
+                .removeOnComplete(true)
+                .ttl(15000)
+                .save();
+              callback();
+            } else {
+              const objectDB = {
+                id: job.data.id,
+                taskid: job.data.taskid,
+                guid: coupon[0].guid,
+                type: 2,
+                coupon: coupon[0].code,
+                act: coupon[0].act,
+                actclient: coupon[0].actclient,
+                minprice: coupon[0].minprice,
+                discount: parseFloat(coupon[0].discount).toFixed(2),
+                typediscount: coupon[0].typeid,
+                until: moment(coupon[0].expired_at).format('DD-MM-YYYY'),
+                disabled: coupon[0].disabled,
+                taskType: 9,
+              };
+              const objectXLSX = {
+                id: job.data.id,
+                taskid: job.data.taskid,
+                guid: coupon[0].guid,
+                type: 2,
+                coupon: row['Код купона'],
+                act,
+                actclient,
+                minprice: parseFloat(minprice),
+                discount: parseFloat(row['Величина скидки']).toFixed(2),
+                typediscount: typeDiscount,
+                until: row['Действителен по'],
+                disabled,
+                taskType: 9,
+              };
+              if (!_.isEqual(objectDB, objectXLSX)) {
+                log.info(`Магазин id=${job.data.id} Купон ${row['Код купона']} изменён`);
+                queue.create('inSales', objectXLSX)
+                  .attempts(3)
+                  .priority('normal')
+                  .removeOnComplete(true)
+                  .ttl(15000)
+                  .save();
+                callback();
+              } else {
+                log.info(`Магазин id=${job.data.id} В файле xlsx и базе приложения купоны одинаковые, игнорируем изменения`);
+                callback();
+              }
+            }
           }
         });
-      } else {
-        log('Приложение не установлено для данного магазина');
-        setImmediate(done);
       }
-    });
-  },
+    } else {
+      callback();
+    }
+  }, e => {
+    if (e) {
+      log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
+    } else {
+      log.info(`Магазин id=${job.data.id} Импорт купонов завершён успешно`);
+      createJobUpdateTimeTask(job.data.taskid);
+      createJobCloseTask(job.data.taskid);
+    }
+  });
+}
 
-  getCouponFromShop: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        rest.get('http://' + process.env.insalesid + ':'
-                + app.token + '@'
-                + app.insalesurl
-                + '/admin/discount_codes/'
-                + job.data.guid
-                + '.xml', {
-                  headers: {'Content-Type': 'application/xml'},
-                  xml2js: {
-                    trim: false,
-                    explicitArray: false,
-                    ignoreAttrs: true
-                  }
-                }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
-          } else {
-            if (o.errors) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-              setImmediate(done);
+function updateCoupon(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      const description = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
+      const disabled = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
+      const coupon = {
+        discount_code: {
+          code: job.data.coupon,
+          act_once: job.data.act,
+          discount: job.data.discount,
+          type_id: job.data.typediscount,
+          description,
+          disabled: `${disabled}`,
+          'expired-at': moment(job.data.until, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+        },
+      };
+      if (!_.isUndefined(job.data.minprice) ||
+          (+job.data.minprice !== 0) ||
+          (!_.isNull(job.data.minprice))) {
+        coupon.discount_code['min-price'] = job.data.minprice;
+      }
+      if (_.isUndefined(job.data.actclient) || (job.data.actclient === '')) {
+        coupon.discount_code.act_once_for_client = '0';
+      } else {
+        coupon.discount_code.act_once_for_client = '1';
+      }
+      insales.editCoupon({
+        token: app.token,
+        url: app.insalesurl,
+        couponid: job.data.guid,
+        coupon,
+      }).then(data => {
+        queue.create('inSales', {
+          id: job.data.id,
+          guid: job.data.guid,
+          taskType: 7,
+        }).attempts(3)
+          .priority('normal')
+          .removeOnComplete(true)
+          .ttl(15000)
+          .save();
+        done();
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
             } else {
-              Coupons.findOne({guid:job.data.guid}, function(err, coupon) {
-                if (err) {
-                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                  setImmediate(done);
-                } else {
-                  coupon.code        = o['discount-code']['code'];
-                  coupon.description = o['discount-code']['description'];
-                  coupon.act         = o['discount-code']['act-once'];
-                  coupon.actclient   = o['discount-code']['act-once-for-client'];
-                  coupon.typeid      = o['discount-code']['type-id'];
-                  coupon.discount    = o['discount-code']['discount'];
-                  coupon.minprice    = o['discount-code']['min-price'];
-                  coupon.worked      = o['discount-code']['worked'];
-                  coupon.expired_at  = o['discount-code']['expired-at'];
-                  coupon.created_at  = o['discount-code']['created-at'];
-                  coupon.updated_at  = o['discount-code']['updated-at'];
-                  coupon.disabled    = o['discount-code']['disabled'];
-                  coupon.save(function (err) {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done(err.response.statusCode);
+        }
+      });
+    } else {
+      log.info(`Приложение не установлено для данного магазина`);
+      done();
+    }
+  });
+}
+
+function getCouponFromShop(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      insales.getCoupon({
+        token: app.token,
+        url: app.insalesurl,
+        couponid: job.data.guid,
+      }).then(data => {
+        const _couponInsales = data.data;
+        log.info(data.response.headers['api-usage-limit']);
+        Coupons.findOne({
+          guid: job.data.guid,
+        }, (err, c) => {
+          const _coupon = c;
+          if (err) {
+            log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+            done();
+          } else {
+            _coupon.code        = _couponInsales['discount-code'].code;
+            _coupon.description = _couponInsales['discount-code'].description;
+            _coupon.act         = _couponInsales['discount-code']['act-once'];
+            _coupon.actclient   = _couponInsales['discount-code']['act-once-for-client'];
+            _coupon.typeid      = _couponInsales['discount-code']['type-id'];
+            _coupon.discount    = _couponInsales['discount-code'].discount;
+            _coupon.minprice    = _couponInsales['discount-code']['min-price'];
+            _coupon.worked      = _couponInsales['discount-code'].worked;
+            _coupon.expired_at  = _couponInsales['discount-code']['expired-at'];
+            _coupon.created_at  = _couponInsales['discount-code']['created-at'];
+            _coupon.updated_at  = _couponInsales['discount-code']['updated-at'];
+            _coupon.disabled    = _couponInsales['discount-code'].disabled;
+            _coupon.save(err => {
+              if (err) {
+                log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+                done();
+              } else {
+                log.info(`Магазин id=${job.data.id} Получены данные купона`);
+                done();
+              }
+            });
+          }
+        });
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+            } else {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done(err.response.statusCode);
+        }
+      });
+    } else {
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+      done();
+    }
+  });
+}
+
+function createJobCreateCoupons(job) {
+  let count = 0;
+  as.whilst(() => {
+    return count < job.data.numbers;
+  }, callback => {
+    count++;
+    queue.create('inSales', {
+      id: job.data.id,
+      taskid: job.data.taskid,
+      type: 2,
+      coupon: cc.generate({
+        parts: job.data.parts,
+        partLen: job.data.length,
+      }),
+      act: job.data.act,
+      actclient: job.data.actclient,
+      minprice: job.data.minprice,
+      discount: job.data.discount,
+      typediscount: job.data.typediscount,
+      until: job.data.until,
+      taskType: 8,
+    }).attempts(3)
+      .priority('normal')
+      .removeOnComplete(true)
+      .ttl(15000)
+      .save();
+    callback();
+  }, err => {
+    if (err) {
+      log.error(err);
+    } else {
+      createJobUpdateTimeTask(job.data.taskid);
+      createJobCloseTask(job.data.taskid);
+    }
+  });
+}
+
+function createCoupons(job, ctx, done) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      const description = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
+      const disabled = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
+      const coupon = {
+        discount_code: {
+          code: job.data.coupon,
+          act_once: job.data.act,
+          discount: job.data.discount,
+          type_id: job.data.typediscount,
+          description,
+          disabled: `${disabled}`,
+          'expired-at': moment(job.data.until, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+        },
+      };
+      if (!_.isUndefined(job.data.minprice) ||
+          (+job.data.minprice !== 0) ||
+          (!_.isNull(job.data.minprice))) {
+        coupon.discount_code['min-price'] = job.data.minprice;
+      }
+      if (_.isUndefined(job.data.actclient) || (job.data.actclient === '')) {
+        coupon.discount_code.act_once_for_client = '0';
+      } else {
+        coupon.discount_code.act_once_for_client = '1';
+      }
+      insales.createCoupon({
+        token: app.token,
+        url: app.insalesurl,
+        coupon,
+      }).then(data => {
+        const _coupon = data.data;
+        const coup = new Coupons({
+          insalesid           : job.data.id,
+          guid                : _coupon['discount-code'].id,
+          code                : _coupon['discount-code'].code,
+          description         : _coupon['discount-code'].description,
+          act                 : _coupon['discount-code']['act-once'],
+          actclient           : _coupon['discount-code']['act-once-for-client'],
+          typeid              : _coupon['discount-code']['type-id'],
+          discount            : _coupon['discount-code'].discount,
+          minprice            : _coupon['discount-code']['min-price'],
+          worked              : _coupon['discount-code'].worked,
+          discountcollections : 'Все',
+          expired_at          : _coupon['discount-code']['expired-at'],
+          created_at          : _coupon['discount-code']['created-at'],
+          updated_at          : _coupon['discount-code']['updated-at'],
+          disabled            : _coupon['discount-code'].disabled,
+        });
+        coup.save(err => {
+          if (err) {
+            log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+            done(err);
+          } else {
+            log.info(`Магазин id=${job.data.id} Создан купон id=${_coupon['discount-code'].id}`);
+            done();
+          }
+        });
+      }).catch(err => {
+        if (err.response.statusCode === 401) {
+          createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+          createJobDisableApp(job.data.taskid);
+          done();
+        } else if (err.response.statusCode === 503) {
+          createJobUpdateTimeTask(job.data.taskid);
+          const _timeout = +err.response.headers['retry-after'] || 100;
+          ctx.pause(5000, err => {
+            if (err) {
+              log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+            } else {
+              log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
+              setTimeout(() => {
+                ctx.resume();
+              }, _timeout * 1000);
+            }
+          });
+        } else {
+          log.error(`${err.type}\n${err.url}\n${err.response.req.method} ${err.response.req.path}\n${JSON.stringify(err.msg)}`);
+          done();
+        }
+      });
+    } else {
+      log.warn(`Приложение не установлено для данного магазина`);
+      done();
+    }
+  });
+}
+
+function createExportFile(job) {
+  Apps.findOne({
+    insalesid: job.data.id,
+  }, (err, app) => {
+    if (app.enabled === true) {
+      const wb = new xl.WorkBook();
+      const ws = wb.WorkSheet('Купоны');
+      const headerStyle = new rowStyle(wb, true, false, true);
+      const rowOddStyle = new rowStyle(wb, true, false, false);
+      const rowOddStyleMiddle = new rowStyle(wb, true, true, false);
+      const rowEvenStyle = new rowStyle(wb, false, false, false);
+      const rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
+      ws.Row(1).Height(30);
+      ws.Column(1).Width(30);
+      ws.Column(2).Width(30);
+      ws.Column(3).Width(30);
+      ws.Column(4).Width(30);
+      ws.Column(5).Width(30);
+      ws.Column(6).Width(30);
+      ws.Column(7).Width(30);
+      ws.Column(8).Width(30);
+      ws.Column(9).Width(30);
+      ws.Column(10).Width(30);
+      ws.Column(11).Width(30);
+      ws.Cell(1, 1).String('Код купона').Style(headerStyle);
+      ws.Cell(1, 2).String('Тип купона').Style(headerStyle);
+      ws.Cell(1, 3).String('Тип скидки').Style(headerStyle);
+      ws.Cell(1, 4).String('Величина скидки').Style(headerStyle);
+      ws.Cell(1, 5).String('Описание').Style(headerStyle);
+      ws.Cell(1, 6).String('Группа категорий').Style(headerStyle);
+      ws.Cell(1, 7).String('Минимальная сумма заказа').Style(headerStyle);
+      ws.Cell(1, 8).String('Один раз для каждого клиента').Style(headerStyle);
+      ws.Cell(1, 9).String('Действителен по').Style(headerStyle);
+      ws.Cell(1, 10).String('Заблокирован').Style(headerStyle);
+      ws.Cell(1, 11).String('Использован').Style(headerStyle);
+      Coupons.find({
+        insalesid: job.data.id,
+      }, (err, coupons) => {
+        if (_.isEmpty(coupons)) {
+          createJobCloseTask(job.data.taskid, 'Отсутствуют купоны в базе приложения');
+        } else {
+          let i = 2;
+          as.each(coupons, (coup, callback) => {
+            const typeDiscount = ((+coup.typeid === 1) ? 'процент' : 'денежная величина');
+            const minprice = ((coup.minprice === null) ? ' ' : coup.minprice.toFixed(1));
+            const act = ((+coup.act === 1) ? 'одноразовый' : 'многоразовый');
+            const actclient = ((+coup.actclient === 1) ? 'да' : 'нет');
+            const expired = moment(new Date(coup.expired_at)).format('DD-MM-YYYY');
+            let worked = ' ';
+            if ((+coup.disabled === 0) && (+coup.worked === 0)) {
+              worked = 'да';
+            } else if ((+coup.disabled === 0) && (+coup.worked === 1)) {
+              worked = 'нет';
+            }
+            const disabled = ((+coup.disabled === 1) ? 'да' : 'нет');
+            ws.Row(i).Height(20);
+            ws.Cell(i, 1)
+              .String(coup.code)
+              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.Cell(i, 2)
+              .String(act)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 3)
+              .String(typeDiscount)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 4)
+              .Number(+coup.discount)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 5)
+              .String(coup.description)
+              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.Cell(i, 6)
+              .String(coup.discountcollections)
+              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.Cell(i, 7)
+              .Number(+minprice)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 8)
+              .String(actclient)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 9)
+              .String(expired)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 10)
+              .String(disabled)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.Cell(i, 11)
+              .String(worked)
+              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            i++;
+            callback();
+          }, e => {
+            if (e) {
+              log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
+            } else {
+              log.info(`Магазин id=${job.data.id} Записываем xlsx файл`);
+              const path = `${__dirname}/public/files/${job.data.id}`;
+              fs.exists(path, exists => {
+                if (exists) {
+                  wb.write(`${path}/coupons.xlsx`, err => {
                     if (err) {
-                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                      setImmediate(done);
+                      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                     } else {
-                      log('Магазин id=' + job.data.id + ' Получены данные купона');
-                      setImmediate(done);
+                      createJobCloseTask(job.data.taskid);
                     }
                   });
-                }
-              });
-            }
-          }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина');
-        setImmediate(done);
-      }
-    });
-  },
-
-  createJobCreateCoupons: function(job) {
-    var count = 0;
-    async.whilst(
-      function() { return count < job.data.numbers; },
-      function(callback) {
-        count++;
-        jobs.create('create', {
-          id: job.data.id,
-          taskid: job.data.taskid,
-          type: 2,
-          coupon: cc.generate({ parts: job.data.parts, partLen: job.data.length }),
-          act: job.data.act,
-          actclient: job.data.actclient,
-          minprice: job.data.minprice,
-          discount: job.data.discount,
-          typediscount: job.data.typediscount,
-          until: job.data.until
-        }).delay(600).priority('normal').save();
-        setImmediate(callback);
-      }, function(err) {
-           // TODO ошибку err словить
-           Queue.createJobCloseTask(job.data.taskid);
-         }
-    );
-  },
-
-  createCoupons: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        var desc = (_.isUndefined(job.data.desc) ? 'генератор купонов' : job.data.desc);
-        var disb = (_.isUndefined(job.data.disabled) ? false : job.data.disabled);
-        var minprice = (_.isUndefined(job.data.minprice) || (job.data.minprice == 0) || (_.isNull(job.data.minprice))) ? '' : '<min-price>' + job.data.minprice + '</min-price>';
-        var actclient = (_.isUndefined(job.data.actclient) || (job.data.actclient == '')) ? '<act_once_for_client>0</act_once_for_client>' : '<act_once_for_client>1</act_once_for_client>';
-        var coupon = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
-                   + '<discount_code>'
-                   + '<code>' + job.data.coupon + '</code>'
-                   + '<act_once>' + job.data.act + '</act_once>'
-                   + minprice
-                   + actclient
-                   + '<discount>' + job.data.discount + '</discount>'
-                   + '<type_id>' + job.data.typediscount + '</type_id>'
-                   + '<description>' + desc + '</description>'
-                   + '<disabled>' + disb + '</disabled>'
-                   + '<expired-at>' + moment(job.data.until, 'DD.MM.YYYY')
-                                      .format('YYYY-MM-DD') + '</expired-at>'
-                   + '</discount_code>';
-        rest.post('http://' + process.env.insalesid + ':'
-                 + app.token + '@'
-                 + app.insalesurl
-                 + '/admin/discount_codes.xml', {
-                   data: coupon,
-                   headers: {'Content-Type': 'application/xml'},
-                   xml2js: {
-                     trim: false,
-                     explicitArray: false,
-                     ignoreAttrs: true
-                   }
-                 }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
-          } else {
-            if (o.errors) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-              setImmediate(done);
-            } else {
-              var coupon = new Coupons({
-                insalesid           : job.data.id,
-                guid                : o['discount-code']['id'],
-                code                : o['discount-code']['code'],
-                description         : o['discount-code']['description'],
-                act                 : o['discount-code']['act-once'],
-                actclient           : o['discount-code']['act-once-for-client'],
-                typeid              : o['discount-code']['type-id'],
-                discount            : o['discount-code']['discount'],
-                minprice            : o['discount-code']['min-price'],
-                worked              : o['discount-code']['worked'],
-                discountcollections : 'Все',
-                expired_at          : o['discount-code']['expired-at'],
-                created_at          : o['discount-code']['created-at'],
-                updated_at          : o['discount-code']['updated-at'],
-                disabled            : o['discount-code']['disabled']
-              });
-              coupon.save(function (err) {
-                if (err) {
-                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                  setImmediate(done);
                 } else {
-                  log('Магазин id=' + job.data.id + ' Создан купон');
-                  setImmediate(done);
-                }
-              });
-            }
-          }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина');
-        setImmediate(done);
-      }
-    });
-  },
-
-  createExportFile: function(job) {
-    Apps.findOne({insalesid: job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        var wb = new xl.WorkBook();
-        var ws = wb.WorkSheet('Купоны');
-        var headerStyle = new rowStyle(wb, true, false, true);
-        var rowOddStyle = new rowStyle(wb, true, false, false);
-        var rowOddStyleMiddle = new rowStyle(wb, true, true, false);
-        var rowEvenStyle = new rowStyle(wb, false, false, false);
-        var rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
-        ws.Row(1).Height(30);
-        ws.Column(1).Width(30);
-        ws.Column(2).Width(30);
-        ws.Column(3).Width(30);
-        ws.Column(4).Width(30);
-        ws.Column(5).Width(30);
-        ws.Column(6).Width(30);
-        ws.Column(7).Width(30);
-        ws.Column(8).Width(30);
-        ws.Column(9).Width(30);
-        ws.Column(10).Width(30);
-        ws.Column(11).Width(30);
-        ws.Cell(1,1).String('Код купона').Style(headerStyle);
-        ws.Cell(1,2).String('Тип купона').Style(headerStyle);
-        ws.Cell(1,3).String('Тип скидки').Style(headerStyle);
-        ws.Cell(1,4).String('Величина скидки').Style(headerStyle);
-        ws.Cell(1,5).String('Описание').Style(headerStyle);
-        ws.Cell(1,6).String('Группа категорий').Style(headerStyle);
-        ws.Cell(1,7).String('Минимальная сумма заказа').Style(headerStyle);
-        ws.Cell(1,8).String('Один раз для каждого клиента').Style(headerStyle);
-        ws.Cell(1,9).String('Действителен по').Style(headerStyle);
-        ws.Cell(1,10).String('Заблокирован').Style(headerStyle);
-        ws.Cell(1,11).String('Использован').Style(headerStyle);
-        Coupons.find({
-          insalesid: job.data.id
-        }, function(err, coupons) {
-             if (_.isEmpty(coupons)) {
-               Queue.createJobCloseTask(job.data.taskid, 'Отсутствуют купоны в базе приложения');
-             } else {
-               var i = 2;
-               async.each(coupons, function(coup, callback) {
-                 var type_discount = ((coup.typeid == 1) ? 'процент' : 'денежная величина');
-                 var minprice = ((coup.minprice == null) ? ' ' : coup.minprice.toFixed(1));
-                 var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
-                 var actclient = ((coup.actclient == 1) ? 'да' : 'нет');
-                 var expired = moment(new Date(coup.expired_at))
-                               .format('DD-MM-YYYY');
-                 var worked = ' ';
-                 if ((coup.disabled == 0) && (coup.worked == 0)) {
-                   worked = 'да';
-                 } else if ((coup.disabled == 0) && (coup.worked == 1)) {
-                   worked = 'нет';
-                 }
-                 var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
-                 ws.Row(i).Height(20);
-                 ws.Cell(i,1)
-                 .String(coup.code)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,2)
-                 .String(act)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,3)
-                 .String(type_discount)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,4)
-                 .Number(coup.discount)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,5)
-                 .String(coup.description)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,6)
-                 .String(coup.discountcollections)
-                 .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-                 ws.Cell(i,7)
-                 .Number(minprice)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,8)
-                 .String(actclient)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,9)
-                 .String(expired)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,10)
-                 .String(disabled)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 ws.Cell(i,11)
-                 .String(worked)
-                 .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-                 i++;
-                 setImmediate(callback);
-               }, function(e) {
-                    if (e) {
-                      log('Магазин id=' + job.data.id + ' Ошибка: ' + e, 'error');
+                  fs.mkdir(path, err => {
+                    if (err) {
+                      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                     } else {
-                      log('Магазин id=' + job.data.id + ' Записываем xlsx файл');
-                      var path = __dirname + '/files/' + job.data.id;
-                      fs.exists(path, function(exists) {
-                        if (exists) {
-                          wb.write(path + '/coupons.xlsx', function(err) {
-                            if (err) {
-                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                            } else {
-                              Queue.createJobCloseTask(job.data.taskid);
-                            }
-                          });
+                      wb.write(`${path}/coupons.xlsx`, err => {
+                        if (err) {
+                          log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                         } else {
-                          fs.mkdir(path, function(err) {
-                            if (err) {
-                              log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                            } else {
-                              wb.write(path + '/coupons.xlsx', function(err) {
-                                if (err) {
-                                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                                } else {
-                                  log('Магазин id=' + job.data.id + ' Файл успешно создан');
-                                  Queue.createJobCloseTask(job.data.taskid);
-                                }
-                              });
-                            }
-                          });
+                          log.info(`Магазин id=${job.data.id} Файл успешно создан`);
+                          createJobCloseTask(job.data.taskid);
                         }
                       });
                     }
                   });
-             }
-           });
-      } else {
-        log('Приложение не установлено для данного магазина', 'warn');
-      }
-    })
-  },
-
-  pay: function(job, done) {
-    Apps.findOne({insalesid:job.data.id}, function(err, app) {
-      if (app.enabled == true) {
-        var pay = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'
-                + '<recurring-application-charge>'
-                + '<monthly type=\"decimal\">300.0</monthly>'
-                + '</recurring-application-charge>';
-        rest.post('http://' + process.env.insalesid + ':'
-                 + app.token + '@'
-                 + app.insalesurl
-                 + '/admin/recurring_application_charge.xml', {
-                   data: pay,
-                   headers: {'Content-Type': 'application/xml'},
-                   xml2js: {
-                     trim: false,
-                     explicitArray: false,
-                     ignoreAttrs: true
-                   }
-                 }).once('complete', function(o) {
-          if (o instanceof Error) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-            setImmediate(done);
-          } else {
-            if (o.errors) {
-              log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-              setImmediate(done);
-            } else {
-              Charges.findOne({insalesid: job.data.id}, function(err, charge) {
-                if (_.isEmpty(charge)) {
-                  var p = new Charges({
-                    insalesid  : job.data.id,
-                    guid       : o['recurring-application-charge']['id'],
-                    monthly    : o['recurring-application-charge']['monthly'],
-                    till       : o['recurring-application-charge']['paid-till'],
-                    expired_at : o['recurring-application-charge']['trial-expired-at'],
-                    created_at : o['recurring-application-charge']['created-at'],
-                    updated_at : o['recurring-application-charge']['updated-at'],
-                    blocked    : o['recurring-application-charge']['blocked']
-                  });
-                  p.save(function (err) {
-                    if (err) {
-                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                      setImmediate(done);
-                    } else {
-                      log('Магазин id=' + job.data.id + ' Создан счёт');
-                      setImmediate(done);
-                    }
-                  });
-                } else {
-                  charge.guid = o['recurring-application-charge']['id'];
-                  charge.monthly = o['recurring-application-charge']['monthly'];
-                  charge.till = o['recurring-application-charge']['paid-till'];
-                  charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
-                  charge.created_at = o['recurring-application-charge']['created-at'];
-                  charge.updated_at = o['recurring-application-charge']['updated-at'];
-                  charge.blocked = o['recurring-application-charge']['blocked'];
-                  charge.save(function (err) {
-                    if (err) {
-                      log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                      setImmediate(done);
-                    } else {
-                      log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
-                      setImmediate(done);
-                    }
-                  });
                 }
               });
             }
-          }
-        });
-      } else {
-        log('Приложение не установлено для данного магазина', 'warn');
-      }
-    });
-  },
-
-  createJobCloseTask: function(taskid, message) {
-    log('Создаём задание на зыкрытие');
-    log(taskid);
-    if (_.isUndefined(message)) {
-      jobs.create('close', {
-        taskid: taskid,
-        message: undefined
-      }).delay(600).priority('normal').save();
-    } else {
-      jobs.create('close', {
-        taskid: taskid,
-        message: message
-      }).delay(600).priority('normal').save();
-    }
-  },
-
-  closeTask: function(taskid, message, done) {
-    log('Закрываем задание');
-    Tasks.findById(taskid, function(err, task) {
-      task.status = 3;
-      task.updated_at = new Date();
-      if (!_.isUndefined(message)) {
-        task.message = message;
-      }
-      if ((_.isUndefined(message)) && (task.type == 8)) {
-        task.file = 1;
-      }
-      task.save(function(err) {
-        if (err) {
-          log('Магазин id=' + task.insalesid + ' Ошибка: ' + err, 'error');
-          Queue.createJobCloseTask(taskid, message);
-          setImmediate(done);
-        } else {
-          log('Магазин id=' + task.insalesid + ' Задание успешно закрыто');
-          setImmediate(done);
+          });
         }
       });
-    })
+    } else {
+      log.warn(`Приложение не установлено для данного магазина`);
+    }
+  });
+}
+
+function createJobCloseTask(taskid, message) {
+  log.info(`Создаём задание на зыкрытие`);
+  log.info(taskid);
+  if (_.isUndefined(message)) {
+    queue.create('inSales', {
+      taskid,
+      message: undefined,
+      taskType: 10,
+    }).attempts(3)
+      .priority('normal')
+      .removeOnComplete(true)
+      .ttl(2000)
+      .save();
+  } else {
+    queue.create('inSales', {
+      taskid,
+      message,
+      taskType: 10,
+    }).attempts(3)
+      .priority('normal')
+      .removeOnComplete(true)
+      .ttl(2000)
+      .save();
   }
 }
 
-jobs.process('deleteApp', function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // удаляем купоны из базы приложения
-    Queue.deleteCouponsFromApp(job, done);
-  });
-});
-
-jobs.process('deleteCollections', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // удаляем категорий из базы приложения
-    Queue.deleteCollectionsFromApp(job, done);
-  });
-});
-
-jobs.process('getCollections', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // достаём категории из магазина
-    Queue.getCollections(job, done);
-    });
-});
-
-jobs.process('deleteInsales', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // удаляем купоны из магазина
-    if (job.data.couponid === undefined) {
-      if (job.data.type == 6) {
-        Queue.createJobCloseTask(job.data.taskid);
-        setImmediate(done);
+function closeTask(taskid, message, done) {
+  log.info('Закрываем задание');
+  Tasks.findById(taskid, (err, t) => {
+    const _task = t;
+    _task.status = 3;
+    _task.updated_at = new Date();
+    if (!_.isUndefined(message)) {
+      _task.message = message;
+    }
+    if ((_.isUndefined(message)) && (_task.type === 8)) {
+      _task.file = 1;
+    }
+    _task.save(err => {
+      if (err) {
+        log.error(`Магазин id=${_task.insalesid} Ошибка: ${err}`);
+        createJobCloseTask(taskid, message);
+        done();
       } else {
-        Queue.createJobCreateCoupons(job);
-        setImmediate(done);
+        log.info(`Магазин id=${_task.insalesid} Задание успешно закрыто`);
+        done();
       }
+    });
+  });
+}
+
+function createJobSync(job, done) {
+  // после установки первое задание на синхронизации
+  log.info(`Магазин id=${job.data.id} После установки первое задание на синхронизации`);
+  const T = new Tasks({
+    insalesid: job.data.id,
+    type: 5,
+    status: 1,
+    created_at : new Date(),
+    updated_at : new Date(),
+  });
+  T.save(err => {
+    if (err) {
+      log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
+      done();
     } else {
-      Queue.deleteCoupons(job, done);
+      log.info(`Магазин id=${job.data.id} Создано задание на синхронизацию после установки`);
+      done();
+    }
+  });
+}
+
+function createJobDisableApp(insales) {
+  log.info(`ShopId=${insales} Task to disable app`);
+  queue.create('inSales', {
+    id: insales,
+    taskType: 11,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(2000)
+    .save();
+}
+
+function disableTask(insales, done) {
+  Apps.findOne({
+    insalesid: insales,
+  }, (err, a) => {
+    const _app = a;
+    _app.enabled = false;
+    _app.save(err => {
+      if (err) {
+        log.error(`ShopId=${insales} Error: ${err}`);
+        done(err);
+      } else {
+        log.info(`ShopId=${insales} Disabled`);
+        done();
+      }
+    });
+  });
+}
+
+function createJobUpdateTimeTask(taskid) {
+  log.info(`TaskId=${taskid} Create task to update time task`);
+  queue.create('inSales', {
+    taskid,
+    taskType: 12,
+  }).attempts(3)
+    .priority('normal')
+    .removeOnComplete(true)
+    .ttl(2000)
+    .save();
+}
+
+function updateTimeTask(taskid, done) {
+  log.info(`TaskId=${taskid} Update time task`);
+  Tasks.findById(taskid, (err, t) => {
+    if (err) {
+      log.error(`Error: ${err}`);
+      done(err);
+    } else {
+      const _task = t;
+      _task.updated_at = new Date();
+      _task.save(err => {
+        if (err) {
+          log.error(`ShopId=${_task.insalesid} Error: ${err}`);
+          done(err);
+        } else {
+          log.info(`ShopId=${_task.insalesid} Task update time success`);
+          done();
+        }
+      });
+    }
+  });
+}
+
+queue.process('inSales', 1, (job, ctx, done) => {
+  const domain = require('domain').create();
+  domain.on('error', err => {
+    done(err);
+  });
+  domain.run(() => {
+    switch (job.data.taskType) {
+      case 1:
+        // обрабатываем полученные свойства товара
+        createJobSync(job, done);
+        break;
+      case 2:
+        // удаляем купоны из базы приложения
+        deleteCouponsFromApp(job, done);
+        break;
+      case 3:
+        // удаляем категорий из базы приложения
+        deleteCollectionsFromApp(job, done);
+        break;
+      case 4:
+        // достаём категории из магазина
+        getCollections(job, ctx, done);
+        break;
+      case 5:
+        // удаляем купоны из магазина
+        if (job.data.couponid === undefined) {
+          if (job.data.type === 6) {
+            createJobCloseTask(job.data.taskid);
+            done();
+          } else {
+            createJobCreateCoupons(job);
+            done();
+          }
+        } else {
+          deleteCoupons(job, ctx, done);
+        }
+        break;
+      case 6:
+        // достаём купоны из магазина
+        getCouponsFromShop(job, ctx, done);
+        break;
+      case 7:
+        // информация купона из магазина getCoupon
+        getCouponFromShop(job, ctx, done);
+        break;
+      case 8:
+        // создаём купоны create
+        createCoupons(job, ctx, done);
+        break;
+      case 9:
+        // обновляем купоны update
+        updateCoupon(job, ctx, done);
+        break;
+      case 10:
+        // создаём купоны close
+        closeTask(job.data.taskid, job.data.message, done);
+        break;
+      case 11:
+        // отключаем приложение
+        disableTask(job.data.id, done);
+        break;
+      case 12:
+        // обновляем время у задания
+        updateTimeTask(job.data.taskid, done);
+        break;
+      default:
+        done();
     }
   });
 });
 
-jobs.process('get', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // достаём купоны из магазина
-    Queue.getCouponsFromShop(job, done);
-  });
-});
-
-jobs.process('getCoupon', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // информация купона из магазина
-    Queue.getCouponFromShop(job, done);
-  });
-});
-
-jobs.process('create', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // создаём купоны
-    Queue.createCoupons(job, done);
-  });
-});
-
-jobs.process('update', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // обновляем купоны
-    Queue.updateCoupon(job, done);
-  });
-});
-
-jobs.process('close', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // создаём купоны
-    Queue.closeTask(job.data.taskid, job.data.message, done);
-  });
-});
-
-jobs.process('syncall', function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // после установки первое задание на синхронизации
-    log('Магазин id=' + job.data.id + ' После установки первое задание на синхронизации');
-    var T = new Tasks({
-      insalesid: job.data.id,
-      type: 5,
-      status: 1,
-      created_at : new Date(),
-      updated_at : new Date()
-    });
-    T.save(function (err) {
-      if (err) {
-        log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-        setImmediate(done);
-      } else {
-        log('Магазин id=' + job.data.id + ' Создано задание на синхронизацию после установки');
-        setImmediate(done);
-      }
-    });
-  });
-});
-
-jobs.process('pay', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // после установки выставить счёт
-    Queue.pay(job, done);
-  });
-});
-
-jobs.process('checkpay', 1, function(job, done) {
-  var domain = require('domain').create();
-  domain.on('error', function(err){
-    done(err);
-  });
-  domain.run(function() {
-    // дёргаем данные об оплате из insales
-    Charges.findOne({insalesid: job.data.id}, function(err, charge) {
-      rest.get('http://' + process.env.insalesid
-              + ':'
-              + job.data.token
-              + '@'
-              + job.data.insalesurl
-              + '/admin/recurring_application_charge.xml', {
-                headers: {'Content-Type': 'application/xml'},
-                xml2js: {
-                  trim: false,
-                  explicitArray: false,
-                  ignoreAttrs: true
-                }
-              }).once('complete', function(o) {
-        if (o instanceof Error) {
-          log('Магазин id=' + job.data.id + ' Ошибка: ' + o.message, 'error');
-          setImmediate(done);
-        } else {
-          if (o.errors) {
-            log('Магазин id=' + job.data.id + ' Ошибка: ' + o.errors, 'error');
-            setImmediate(done);
-          } else {
-            if (_.isEmpty(charge)) {
-              var p = new Charges({
-                insalesid  : job.data.id,
-                guid       : o['recurring-application-charge']['id'],
-                monthly    : o['recurring-application-charge']['monthly'],
-                till       : o['recurring-application-charge']['paid-till'],
-                created_at : o['recurring-application-charge']['created-at'],
-                updated_at : o['recurring-application-charge']['updated-at'],
-                blocked    : o['recurring-application-charge']['blocked']
-              });
-              p.save(function (err) {
-                if (err) {
-                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                  setImmediate(done);
-                } else {
-                  log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
-                  setImmediate(done);
-                }
-              });
-            } else {
-              charge.guid = o['recurring-application-charge']['id'];
-              charge.monthly = o['recurring-application-charge']['monthly'];
-              charge.till = o['recurring-application-charge']['paid-till'];
-              charge.expired_at = o['recurring-application-charge']['trial-expired-at'];
-              charge.created_at = o['recurring-application-charge']['created-at'];
-              charge.updated_at = o['recurring-application-charge']['updated-at'];
-              charge.blocked = o['recurring-application-charge']['blocked'];
-              charge.save(function (err) {
-                if (err) {
-                  log('Магазин id=' + job.data.id + ' Ошибка: ' + err, 'error');
-                  setImmediate(done);
-                } else {
-                  log('Магазин id=' + job.data.id + ' Сохранён счёт в базу приложения');
-                  setImmediate(done);
-                }
-              });
-            }
-          }
-        }
-      });
-    });
-  });
-});
-
-mongoose.connect('mongodb://' + process.env.mongo + '/coupons');
-
-var Apps = require('./models').Apps;
-var Tasks = require('./models').Task;
-var Settings = require('./models').Sett;
-var Charges = require('./models').Chrg;
-var Coupons = require('./models').Coup;
-var Collections = require('./models').Coll;
-
-//Логгер в одном месте, для упрощения перезда на любой логгер.
-function log(logMsg, logType) {
-  if (logMsg instanceof Error) logger.error(logMsg.stack);
-  if (!_.isUndefined(logType)) {
-    logger.log(logType, logMsg);
-  } else {
-    logger.info(logMsg);
-  }
-};
+mongoose.connect(`mongodb://${process.env.mongo}/coupons`);
