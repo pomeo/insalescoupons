@@ -96,7 +96,7 @@ router.get('/', (req, res) => {
                         variants : typeof sett['coupon-variants'] !== 'undefined' ? sett['coupon-variants'] : 1,
                         type     : typeof sett['coupon-type-discount'] !== 'undefined' ? sett['coupon-type-discount'] : 1,
                         discount : typeof sett['coupon-discount'] !== 'undefined' ? sett['coupon-discount'] : '',
-                        expired  : typeof sett['coupon-until'] !== 'undefined' ? sett['coupon-until'] : '01.01.2016',
+                        expired  : typeof sett['coupon-until'] !== 'undefined' ? sett['coupon-until'] : '01.01.2020',
                       });
                     }
                   });
@@ -134,92 +134,92 @@ router.get('/', (req, res) => {
 router.get('/zadaniya', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
         Charges.findOne({
           insalesid: req.session.insalesid,
         }, (err, charge) => {
-             var ch = (_.isNull(charge)) ? false : charge.blocked;
-             if (ch) {
-               res.render('block', {
-                 msg: 'Приложение заблокировано за неуплату',
-               });
-             } else {
-               var T = Tasks.find({
-                 insalesid: req.session.insalesid,
-               });
-               T.sort({
-                 created_at: -1,
-               });
-               T.limit(50);
-               T.exec((err, tasks) => {
-                 var tasksList = [];
-                 var tasksDone = [];
-                 var tasksProcessing = [];
-                 as.each(tasks, (task, callback) => {
-                   if (task.status === 3) {
-                     if (_.isUndefined(task.message)) {
-                       tasksDone.push({
-                         'type'    : task.type,
-                         'status'  : task.status,
-                         'numbers' : task.numbers,
-                         'variant' : task.variant,
-                         'file'    : task.file,
-                         'created' : new Date(task.created_at),
-                         'updated' : new Date(task.updated_at),
-                       });
-                       callback();
-                     } else {
-                       tasksDone.push({
-                         'type'    : task.type,
-                         'status'  : task.status,
-                         'numbers' : task.numbers,
-                         'variant' : task.variant,
-                         'message' : task.message,
-                         'created' : new Date(task.created_at),
-                         'updated' : new Date(task.updated_at),
-                       });
-                       callback();
-                     }
-                   } else if (task.status === 2) {
-                     tasksProcessing.push({
-                       'type'    : task.type,
-                       'status'  : task.status,
-                       'numbers' : task.numbers,
-                       'variant' : task.variant,
-                       'created' : new Date(task.created_at),
-                       'updated' : new Date(task.updated_at),
-                     });
-                     callback();
-                   } else {
-                     tasksList.push({
-                       'type'    : task.type,
-                       'status'  : task.status,
-                       'numbers' : task.numbers,
-                       'variant' : task.variant,
-                       'created' : new Date(task.created_at),
-                       'updated' : new Date(task.updated_at),
-                     });
-                     callback();
-                   }
-                 }, function(err) {
-                      res.render('tasks', {
-                        _         : _,
-                        tasks     : tasksList,
-                        done      : tasksDone,
-                        processing: tasksProcessing
-                      });
+          const ch = (_.isNull(charge)) ? false : charge.blocked;
+          if (ch) {
+            res.render('block', {
+              msg: 'Приложение заблокировано за неуплату',
+            });
+          } else {
+            const T = Tasks.find({
+              insalesid: req.session.insalesid,
+            });
+            T.sort({
+              created_at: -1,
+            });
+            T.limit(50);
+            T.exec((err, tasks) => {
+              const tasksList = [];
+              const tasksDone = [];
+              const tasksProcessing = [];
+              as.each(tasks, (task, callback) => {
+                if (task.status === 3) {
+                  if (_.isUndefined(task.message)) {
+                    tasksDone.push({
+                      type    : task.type,
+                      status  : task.status,
+                      numbers : task.numbers,
+                      variant : task.variant,
+                      file    : task.file,
+                      created : new Date(task.created_at),
+                      updated : new Date(task.updated_at),
                     });
-               });
-             }
-           });
+                    callback();
+                  } else {
+                    tasksDone.push({
+                      type    : task.type,
+                      status  : task.status,
+                      numbers : task.numbers,
+                      variant : task.variant,
+                      message : task.message,
+                      created : new Date(task.created_at),
+                      updated : new Date(task.updated_at),
+                    });
+                    callback();
+                  }
+                } else if (task.status === 2) {
+                  tasksProcessing.push({
+                    type    : task.type,
+                    status  : task.status,
+                    numbers : task.numbers,
+                    variant : task.variant,
+                    created : new Date(task.created_at),
+                    updated : new Date(task.updated_at),
+                  });
+                  callback();
+                } else {
+                  tasksList.push({
+                    type    : task.type,
+                    status  : task.status,
+                    numbers : task.numbers,
+                    variant : task.variant,
+                    created : new Date(task.created_at),
+                    updated : new Date(task.updated_at),
+                  });
+                  callback();
+                }
+              }, err => {
+                res.render('tasks', {
+                  _,
+                  tasks     : tasksList,
+                  done      : tasksDone,
+                  processing: tasksProcessing,
+                });
+              });
+            });
+          }
+        });
       } else {
         res.render('block', {
           msg: 'Приложение не установлено для данного магазина',
         });
       }
-    })
+    });
   } else {
     res.render('block', {
       msg: 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти',
@@ -230,12 +230,12 @@ router.get('/zadaniya', (req, res) => {
 router.post('/input', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        if (req.param('data') === 1) {
+        if (+req.body.data === 1) {
           // синхронизация
-          var T = new Tasks({
+          const T = new Tasks({
             insalesid: req.session.insalesid,
             type: 5,
             status: 1,
@@ -251,16 +251,16 @@ router.post('/input', (req, res) => {
               res.status(200).send('success');
             }
           });
-        } else if (req.param('data') === 2) {
+        } else if (+req.body.data === 2) {
           // синхронизация
-          var T = new Tasks({
+          const T = new Tasks({
             insalesid: req.session.insalesid,
             type: 8,
             status: 1,
             file: 0,
             count: 0,
             created_at : new Date(),
-            updated_at : new Date()
+            updated_at : new Date(),
           });
           T.save(err => {
             if (err) {
@@ -270,16 +270,16 @@ router.post('/input', (req, res) => {
               res.status(200).send('success');
             }
           });
-        } else if (req.param('variants')) {
+        } else if (req.body.variants) {
           // удаление
-          var T = new Tasks({
+          const T = new Tasks({
             insalesid: req.session.insalesid,
             type: 6,
             status: 1,
-            variant: parseInt(req.param('variants')),
+            variant: +req.body.variants,
             count: 0,
-            created_at : new Date(),
-            updated_at : new Date()
+            created_at: new Date(),
+            updated_at: new Date(),
           });
           T.save(err => {
             if (err) {
@@ -297,7 +297,7 @@ router.post('/input', (req, res) => {
           msg: 'Приложение не установлено для данного магазина',
         });
       }
-    })
+    });
   } else {
     res.render('block', {
       msg: 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти',
@@ -308,27 +308,27 @@ router.post('/input', (req, res) => {
 router.get('/import-export', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
         Charges.findOne({
-          insalesid: req.session.insalesid
+          insalesid: req.session.insalesid,
         }, (err, charge) => {
-             var ch = (_.isNull(charge)) ? false : charge.blocked;
-             if (ch) {
-               res.render('block', {
-                 msg: 'Приложение заблокировано за неуплату',
-               });
-             } else {
-               res.render('io');
-             }
-           });
+          const ch = (_.isNull(charge)) ? false : charge.blocked;
+          if (ch) {
+            res.render('block', {
+              msg: 'Приложение заблокировано за неуплату',
+            });
+          } else {
+            res.render('io');
+          }
+        });
       } else {
         res.render('block', {
           msg: 'Приложение не установлено для данного магазина',
         });
       }
-    })
+    });
   } else {
     res.render('block', {
       msg: 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти',
@@ -338,7 +338,7 @@ router.get('/import-export', (req, res) => {
 
 router.post('/import', (req, res) => {
   if (req.session.insalesid) {
-    var form = new formidable.IncomingForm();
+    const form = new formidable.IncomingForm();
     form.keepExtensions = true;
     form.on('error', (err) => {
       log.error(`Магазин id=${req.session.insalesid} Ошибка: ${err}`);
@@ -349,20 +349,20 @@ router.post('/import', (req, res) => {
     });
 
     form.parse(req, (err, fields, files) => {
-      var T = new Tasks({
+      const T = new Tasks({
         insalesid: req.session.insalesid,
         type: 7,
         status: 1,
         path: files['files[]'].path,
         count: 0,
         created_at : new Date(),
-        updated_at : new Date()
+        updated_at : new Date(),
       });
       T.save(err => {
         if (err) {
           log.error(`Магазин id=${req.session.insalesid} Ошибка: ${err}`);
         } else {
-          log('Done');
+          log.info('Done');
         }
       });
     });
@@ -374,19 +374,19 @@ router.post('/import', (req, res) => {
 router.get('/export', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        var path = `${__dirname}/../public/files/${req.session.insalesid}/coupons.xlsx`;
+        const path = `${__dirname}/../public/files/${req.session.insalesid}/coupons.xlsx`;
         fs.exists(path, exists => {
           if (exists) {
-            var stat = fs.statSync(path);
+            const stat = fs.statSync(path);
             res.writeHead(200, {
               'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
               'Content-Length': stat.size,
-              'Content-Disposition': 'attachment; filename=coupons.xlsx'
+              'Content-Disposition': 'attachment; filename=coupons.xlsx',
             });
-            var readStream = fs.createReadStream(path);
+            const readStream = fs.createReadStream(path);
             readStream.on('open', () => {
               readStream.pipe(res);
             });
@@ -401,7 +401,7 @@ router.get('/export', (req, res) => {
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
-    })
+    });
   } else {
     res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
   }
@@ -416,21 +416,21 @@ router.get('/opisanie', (req, res) => {
         Charges.findOne({
           insalesid: req.session.insalesid,
         }, (err, charge) => {
-             var ch = (_.isNull(charge)) ? false : charge.blocked;
-             if (ch) {
-               res.render('block', {
-                 msg: 'Приложение заблокировано за неуплату',
-               });
-             } else {
-               res.render('desc');
-             }
-           });
+          const ch = (_.isNull(charge)) ? false : charge.blocked;
+          if (ch) {
+            res.render('block', {
+              msg: 'Приложение заблокировано за неуплату',
+            });
+          } else {
+            res.render('desc');
+          }
+        });
       } else {
         res.render('block', {
           msg: 'Приложение не установлено для данного магазина',
         });
       }
-    })
+    });
   } else {
     res.render('block', {
       msg: 'Вход возможен только из панели администратора insales.ru <span class="uk-icon-long-arrow-right"></span> приложения <span class="uk-icon-long-arrow-right"></span> установленные <span class="uk-icon-long-arrow-right"></span> войти',
@@ -444,7 +444,7 @@ router.post('/generate', (req, res) => {
       insalesid:req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        var form = {
+        const form = {
           'coupon-number': parseInt(req.body['c-num']),
           'coupon-parts': parseInt(req.body['c-part']),
           'coupon-part-lengths': parseInt(req.body['c-partlen']),
@@ -457,7 +457,7 @@ router.post('/generate', (req, res) => {
           'coupon-until': moment(req.body['until'], 'DD.MM.YYYY')
             .format('DD.MM.YYYY')
         };
-        var exist = {
+        const exist = {
           'coupon-number': -1,
           'coupon-parts': -1,
           'coupon-part-lengths': -1,
@@ -476,12 +476,13 @@ router.post('/generate', (req, res) => {
             (form['coupon-part-lengths'] >= 4) &&
             (form['coupon-part-lengths'] <= 10)) {
           Settings.find({
-            insalesid:req.session.insalesid
+            insalesid: req.session.insalesid,
           }, (err, settings) => {
             as.each(settings, (s, callback) => {
-              s.value = form[s.property];
-              s.updated_at = new Date();
-              s.save(err => {
+              const _setting = s;
+              _setting.value = form[s.property];
+              _setting.updated_at = new Date();
+              _setting.save(err => {
                 if (err) {
                   log.error(`Магазин id=${req.session.insalesid} Ошибка: ${err}`);
                   callback();
@@ -494,16 +495,16 @@ router.post('/generate', (req, res) => {
               if (e) {
                 log.error(`Магазин id=${req.session.insalesid} Ошибка: ${e}`);
               } else {
-                for (var prop in exist) {
-                  if (exist[prop] == -1) {
-                    var sett = new Settings({
+                for (let prop in exist) {
+                  if (exist[prop] === -1) {
+                    const sett = new Settings({
                       insalesid   : req.session.insalesid,
                       property    : prop,
                       value       : form[prop],
                       created_at  : new Date(),
-                      updated_at  : new Date()
+                      updated_at  : new Date(),
                     });
-                    sett.save(function (err) {
+                    sett.save(err => {
                       if (err) {
                         log.error(`Магазин id=${req.session.insalesid} Ошибка: ${err}`);
                       } else {
@@ -512,7 +513,7 @@ router.post('/generate', (req, res) => {
                     });
                   }
                 }
-                var T = new Tasks({
+                const T = new Tasks({
                   insalesid: req.session.insalesid,
                   type: 1,
                   status: 1,
@@ -528,7 +529,7 @@ router.post('/generate', (req, res) => {
                   until: form['coupon-until'],
                   count: 0,
                   created_at : new Date(),
-                  updated_at : new Date()
+                  updated_at : new Date(),
                 });
                 T.save(err => {
                   if (err) {
@@ -550,16 +551,16 @@ router.post('/generate', (req, res) => {
   } else {
     res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
   }
-})
+});
 
 router.get('/sample', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        var p = parseInt(req.query.parts);
-        var l = parseInt(req.query.length);
+        const p = parseInt(req.query.parts);
+        const l = parseInt(req.query.length);
         if ((p >= 1) && (p <= 5) && (l >= 4) && (l <= 10)) {
           res.json(cc.generate({ parts: p, partLen: l }));
         } else {
@@ -572,15 +573,15 @@ router.get('/sample', (req, res) => {
   } else {
     res.status(403).send('Вход возможен только из панели администратора insales -> приложения -> установленные -> войти');
   }
-})
+});
 
 router.get('/id', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        res.send('Ваш id: ' + req.session.insalesid);
+        res.send(`Ваш id: ${req.session.insalesid}`);
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
@@ -588,54 +589,54 @@ router.get('/id', (req, res) => {
   } else {
     res.status(403).send('Сначала необходимо войти из панели администратора insales -> приложения -> установленные -> войти');
   }
-})
+});
 
 router.get('/data', (req, res) => {
   if (req.session.insalesid) {
     Apps.findOne({
-      insalesid: req.session.insalesid
+      insalesid: req.session.insalesid,
     }, (err, app) => {
       if (app.enabled === true) {
-        var data = [];
+        const data = [];
         Coupons.find({
-          insalesid: req.session.insalesid
+          insalesid: req.session.insalesid,
         }, (err, coupons) => {
-             var i = 0;
-             as.each(coupons, (coup, callback) => {
-               var type_discount = ((coup.typeid == 1) ? ' %' : ' руб');
-               var minprice = ((coup.minprice == null) ? ' ' : coup.minprice);
-               var act = ((coup.act == 1) ? 'одноразовый' : 'многоразовый');
-               var actclient = ((coup.act == 1) ? 'да' : 'нет');
-               var expired = moment(new Date(coup.expired_at))
-                             .format('DD-MM-YYYY');
-               var worked = ' ';
-               if ((coup.disabled == 0) && (coup.worked == 0)) {
-                 worked = 'да';
-               } else if ((coup.disabled == 0) && (coup.worked == 1)) {
-                 worked = 'нет';
-               }
-               var disabled = ((coup.disabled == 1) ? 'да' : 'нет');
-               data[i] = {
-                 code: coup.code,
-                 type: act,
-                 typeid: coup.act,
-                 coll: coup.discountcollections,
-                 disc: coup.discount + type_discount,
-                 expired: expired,
-                 disabled: disabled,
-                 worked: worked
-               };
-               i++;
-               callback();
-             }, e => {
-               if (e) {
-                 log.error(`Магазин id=${req.session.insalesid} Ошибка: ${e}`);
-                 res.sendStatus(200);
-               } else {
-                 res.json(data);
-               }
-             });
-           });
+          let i = 0;
+          as.each(coupons, (coup, callback) => {
+            const typeDiscount = ((coup.typeid === 1) ? ' %' : ' руб');
+            // const minprice = ((coup.minprice === null) ? ' ' : coup.minprice);
+            const act = ((coup.act === true) ? 'одноразовый' : 'многоразовый');
+            // const actclient = ((coup.act === 1) ? 'да' : 'нет');
+            const expired = moment(new Date(coup.expired_at))
+                  .format('DD-MM-YYYY');
+            let worked = ' ';
+            if ((coup.disabled === false) && (coup.worked === false)) {
+              worked = 'да';
+            } else if ((coup.disabled === false) && (coup.worked === true)) {
+              worked = 'нет';
+            }
+            const disabled = ((coup.disabled === true) ? 'да' : 'нет');
+            data[i] = {
+              code: coup.code,
+              type: act,
+              typeid: coup.act,
+              coll: coup.discountcollections,
+              disc: coup.discount + typeDiscount,
+              expired,
+              disabled,
+              worked,
+            };
+            i++;
+            callback();
+          }, e => {
+            if (e) {
+              log.error(`Магазин id=${req.session.insalesid} Ошибка: ${e}`);
+              res.sendStatus(200);
+            } else {
+              res.json(data);
+            }
+          });
+        });
       } else {
         res.status(403).send('Приложение не установлено для данного магазина');
       }
@@ -653,10 +654,10 @@ router.get('/install', (req, res) => {
       req.query.token &&
       req.query.insales_id) {
     Apps.findOne({
-      insalesid: req.query.insales_id
+      insalesid: req.query.insales_id,
     }, (err, a) => {
-      if (a == null) {
-        var app = new Apps({
+      if (a === null) {
+        const app = new Apps({
           insalesid  : req.query.insales_id,
           insalesurl : req.query.shop,
           token      : crypto.createHash('md5')
@@ -664,24 +665,26 @@ router.get('/install', (req, res) => {
                        .digest('hex'),
           created_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
           updated_at : moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ'),
-          enabled    : true
+          enabled    : true,
         });
         app.save(err => {
           if (err) {
-            log('Магазин id=' + req.query.insales_id + ' Ошибка: ' + err, 'error');
-            res.status(500).send({ error: err });
+            log.error(`Магазин id=${req.query.insales_id} Ошибка: ${err}`);
+            res.status(500).send({
+              error: err,
+            });
           } else {
-            log('Магазин id=' + req.query.insales_id + ' Установлен');
+            log.info(`Магазин id=${req.query.insales_id} Установлен`);
             res.sendStatus(200);
-            jobs.create('syncall', {
-              id: req.query.insales_id
-            }).delay(600)
+            queue.create('inSales', {
+              id: req.query.insales_id,
+              taskType: 1,
+            }).attempts(3)
               .priority('normal')
+              .removeOnComplete(true)
+              .ttl(2000)
               .save();
             log.info(`Магазин id=${req.query.insales_id} После установки отправка задания в очередь на синхронизацию`);
-            // jobs.create('pay', {
-            //   id: req.query.insales_id
-            // }).delay(600).priority('normal').save();
             log.info(`Магазин id=${req.query.insales_id} После установки отправка задания в очередь на проверку оплаты`);
             const msg = {
               message: '+1 установка',
@@ -700,12 +703,13 @@ router.get('/install', (req, res) => {
         if (a.enabled === true) {
           res.status(403).send('Приложение уже установленно');
         } else {
-          a.token = crypto.createHash('md5')
-                    .update(req.query.token + process.env.insalessecret)
-                    .digest('hex');
-          a.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
-          a.enabled = true;
-          a.save(err => {
+          const _app = a;
+          _app.token = crypto.createHash('md5')
+            .update(req.query.token + process.env.insalessecret)
+            .digest('hex');
+          _app.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
+          _app.enabled = true;
+          _app.save(err => {
             if (err) {
               log.error(`Магазин id=${req.query.insales_id} Ошибка: ${err}`);
               res.status(500).send({
@@ -714,13 +718,15 @@ router.get('/install', (req, res) => {
             } else {
               log.info(`Магазин id=${req.query.insales_id} Установлен`);
               res.sendStatus(200);
-              jobs.create('syncall', {
-                id: a.insalesid,
-              }).delay(600).priority('normal').save();
+              queue.create('inSales', {
+                id: _app.insalesid,
+                taskType: 1,
+              }).attempts(3)
+                .priority('normal')
+                .removeOnComplete(true)
+                .ttl(2000)
+                .save();
               log.info(`Магазин id=${req.query.insales_id} После установки отправка задания в очередь на синхронизацию`);
-              // jobs.create('pay', {
-              //   id: a.insalesid
-              // }).delay(600).priority('normal').save();
               log.info(`Магазин id=${req.query.insales_id} После установки отправка задания в очередь на проверку оплаты`);
               const msg = {
                 message: '+1 установка',
@@ -753,10 +759,11 @@ router.get('/uninstall', (req, res) => {
     Apps.findOne({
       insalesid: req.query.insales_id,
     }, (err, a) => {
+      const _app = a;
       if (a.token === req.query.token) {
-        a.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
-        a.enabled = false;
-        a.save(function (err) {
+        _app.updated_at = moment().format('ddd, DD MMM YYYY HH:mm:ss ZZ');
+        _app.enabled = false;
+        _app.save(err => {
           if (err) {
             log.error(`Магазин id=${req.query.insales_id} Ошибка: ${err}`);
             res.status(500).send({ error: err });
