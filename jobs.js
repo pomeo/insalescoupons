@@ -1204,7 +1204,6 @@ function getCouponFromShop(job, ctx, done) {
         couponid: job.data.guid,
       }).then(data => {
         const _couponInsales = data.data;
-        log.info(data.response.headers['api-usage-limit']);
         Coupons.findOne({
           guid: job.data.guid,
         }, (err, c) => {
