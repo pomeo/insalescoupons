@@ -522,6 +522,10 @@ function getCollections(job, ctx, done) {
           done(err.response.statusCode);
         }
       });
+    } else {
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
+      done();
     }
   });
 }
@@ -800,7 +804,8 @@ function getCouponsFromShop(job, ctx, done) {
         }
       });
     } else {
-      log.warn(`Приложение не установлено для данного магазина`);
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
       done();
     }
   });
@@ -942,7 +947,8 @@ function deleteCoupons(job, ctx, done) {
         }
       });
     } else {
-      log.warn(`Приложение не установлено для данного магазина`);
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
       done();
     }
   });
@@ -1180,7 +1186,8 @@ function updateCoupon(job, ctx, done) {
         }
       });
     } else {
-      log.info(`Приложение не установлено для данного магазина`);
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
       done();
     }
   });
@@ -1381,7 +1388,8 @@ function createCoupons(job, ctx, done) {
         }
       });
     } else {
-      log.warn(`Приложение не установлено для данного магазина`);
+      log.warn(`ShopId=${job.data.id} App not installed to this shop`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
       done();
     }
   });
