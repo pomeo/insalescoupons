@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node-dev app.js",
     "job": "node-dev jobs.js",
-    "install": "napa mleibman/SlickGrid threedubmedia/jquery.threedubmedia"
+    "napa": "napa mleibman/SlickGrid threedubmedia/jquery.threedubmedia"
   },
   "dependencies": {
     "agenda": "^0.7.6",
