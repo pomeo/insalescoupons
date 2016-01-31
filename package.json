@@ -29,6 +29,7 @@
     "morgan": "^1.6.1",
     "pushover-notifications": "^0.2.2",
     "redis.io": "^0.1.1",
+    "rollbar": "^0.5.12",
     "serve-favicon": "^2.3.0",
     "winston-logs": "^1.0.0",
     "xlsx": "^0.8.0"
