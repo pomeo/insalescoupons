@@ -510,6 +510,7 @@ function getCollections(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
@@ -791,6 +792,7 @@ function getCouponsFromShop(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
@@ -934,6 +936,7 @@ function deleteCoupons(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
@@ -1173,6 +1176,7 @@ function updateCoupon(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
@@ -1210,7 +1214,7 @@ function getCouponFromShop(job, ctx, done) {
           const _coupon = c;
           if (err) {
             log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
-            done();
+            done(err);
           } else {
             _coupon.code        = _couponInsales['discount-code'].code;
             _coupon.description = _couponInsales['discount-code'].description;
@@ -1227,9 +1231,9 @@ function getCouponFromShop(job, ctx, done) {
             _coupon.save(err => {
               if (err) {
                 log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
-                done();
+                done(err);
               } else {
-                log.info(`Магазин id=${job.data.id} Получены данные купона`);
+                log.info(`Магазин id=${job.data.id} Получены данные купона id=${job.data.guid}`);
                 done();
               }
             });
@@ -1246,6 +1250,7 @@ function getCouponFromShop(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
@@ -1374,6 +1379,7 @@ function createCoupons(job, ctx, done) {
           ctx.pause(5000, err => {
             if (err) {
               log.error(`Магазин id=${job.data.id} Ошибка паузы заданий. ${err}`);
+              done(err);
             } else {
               log.warn(`Магазин id=${job.data.id} Лимит API, встаём на паузу`);
               setTimeout(() => {
