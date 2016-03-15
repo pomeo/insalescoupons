@@ -608,12 +608,12 @@ function getCouponsFromShop(job, ctx, done) {
             if (!_.isEmpty(collection)) {
               const arr = [];
               const C = Collections.find({
-                insalesid: job.data.id,
+                insalesid: job.data.id
               });
               C.find({
                 colid: {
-                  $in:collection,
-                },
+                  $in: collection
+                }
               });
               C.exec((err, collec) => {
                 if (err) {
@@ -639,7 +639,7 @@ function getCouponsFromShop(job, ctx, done) {
                     expired_at          : coup['expired-at'],
                     created_at          : coup['created-at'],
                     updated_at          : coup['updated-at'],
-                    disabled            : coup.disabled,
+                    disabled            : coup.disabled
                   });
                   coupon.save(err => {
                     if (err) {
@@ -694,12 +694,12 @@ function getCouponsFromShop(job, ctx, done) {
               if (!_.isEmpty(collection)) {
                 const arr = [];
                 const C = Collections.find({
-                  insalesid: job.data.id,
+                  insalesid: job.data.id
                 });
                 C.find({
                   colid: {
-                    $in:collection,
-                  },
+                    $in: collection
+                  }
                 });
                 C.exec((err, collec) => {
                   if (err) {
