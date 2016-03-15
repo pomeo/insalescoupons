@@ -604,7 +604,7 @@ function getCouponsFromShop(job, ctx, done) {
           if (_.isUndefined(_coupons['discount-codes']['discount-code'][0])) {
             const coup = _coupons['discount-codes']['discount-code'];
             const collection = _.map(coup['discount-collections']
-                                     ['discount-collection'], 'collection-id').join(',');
+                                     ['discount-collection'], 'collection-id');
             if (!_.isEmpty(collection)) {
               const arr = [];
               const C = Collections.find({
