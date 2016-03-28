@@ -1332,9 +1332,9 @@ function createCoupons(job, ctx, done) {
         coupon.discount_code['min-price'] = job.data.minprice;
       }
       if (_.isUndefined(job.data.actclient) || (job.data.actclient === '')) {
-        coupon.discount_code.act_once_for_client = '0';
+        coupon.discount_code.act_once_for_client = 0;
       } else {
-        coupon.discount_code.act_once_for_client = '1';
+        coupon.discount_code.act_once_for_client = job.data.actclient;
       }
       insales.createCoupon({
         token: app.token,
