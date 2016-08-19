@@ -1405,7 +1405,7 @@ function createExportFile(job) {
     insalesid: job.data.id,
   }, (err, app) => {
     if (app.enabled === true) {
-      const wb = new xl.WorkBook();
+      const wb = new xl.Workbook();
       const ws = wb.WorkSheet('Купоны');
       const headerStyle = new rowStyle(wb, true, false, true);
       const rowOddStyle = new rowStyle(wb, true, false, false);
