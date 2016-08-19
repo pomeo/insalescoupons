@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node-dev app.js",
-    "job": "node-dev jobs.js",
+    "start": "nodemon app.js",
+    "job": "nodemon jobs.js",
     "napa": "napa mleibman/SlickGrid threedubmedia/jquery.threedubmedia"
   },
   "dependencies": {
