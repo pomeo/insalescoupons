@@ -860,8 +860,14 @@ function createJobDeleteCoupons(job) {
         .priority('normal')
         .removeOnComplete(true)
         .ttl(15000)
-        .save();
-      callback();
+        .save(err => {
+          if (err) {
+            log.error(err);
+            callback(err);
+          } else {
+            callback();
+          }
+        });
     }, e => {
       if (e) {
         log.error(`Магазин id=${job.data.id} Ошибка: ${e}`);
@@ -886,8 +892,13 @@ function createJobDeleteCoupons(job) {
           .priority('normal')
           .removeOnComplete(true)
           .ttl(15000)
-          .save();
-        createJobUpdateTimeTask(job.data.taskid);
+          .save(err => {
+            if (err) {
+              log.error(err);
+            } else {
+              createJobUpdateTimeTask(job.data.taskid);
+            }
+          });
       }
     });
   });
@@ -1065,8 +1076,14 @@ function createJobParseXLSX(job) {
                 .priority('normal')
                 .removeOnComplete(true)
                 .ttl(15000)
-                .save();
-              callback();
+                .save(err => {
+                  if (err) {
+                    log.error(err);
+                    callback(err);
+                  } else {
+                    callback();
+                  }
+                });
             } else {
               const objectDB = {
                 id: job.data.id,
@@ -1105,8 +1122,14 @@ function createJobParseXLSX(job) {
                   .priority('normal')
                   .removeOnComplete(true)
                   .ttl(15000)
-                  .save();
-                callback();
+                  .save(err => {
+                    if (err) {
+                      log.error(err);
+                      callback(err);
+                    } else {
+                      callback();
+                    }
+                  });
               } else {
                 log.info(`Магазин id=${job.data.id} В файле xlsx и базе приложения купоны одинаковые, игнорируем изменения`);
                 callback();
@@ -1171,8 +1194,14 @@ function updateCoupon(job, ctx, done) {
           .priority('normal')
           .removeOnComplete(true)
           .ttl(15000)
-          .save();
-        done();
+          .save(err => {
+            if (err) {
+              log.error(err);
+              done(err);
+            } else {
+              done();
+            }
+          });
       }).catch(err => {
         if (err.response.statusCode === 401) {
           createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
@@ -1304,8 +1333,14 @@ function createJobCreateCoupons(job) {
       .priority('normal')
       .removeOnComplete(true)
       .ttl(15000)
-      .save();
-    callback();
+      .save(err => {
+        if (err) {
+          log.error(err);
+          callback(err);
+        } else {
+          callback();
+        }
+      });
   }, err => {
     if (err) {
       log.error(err);
