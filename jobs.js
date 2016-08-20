@@ -1573,6 +1573,7 @@ function createExportFile(job) {
       });
     } else {
       log.warn(`Приложение не установлено для данного магазина`);
+      createJobCloseTask(job.data.taskid, 'Приложение не установлено для данного магазина');
     }
   });
 }
