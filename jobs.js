@@ -279,14 +279,18 @@ function isEven(n) {
 function rowStyle(wb, odd, middle, header) {
   const color = ((odd) ? 'E9E7E3' : 'FFFFFF');
   let row = this;
-  row = wb.Style();
+  row = {
+    font: {},
+    alignment: {},
+    border: {}
+  };
   if (header) {
-    row.Font.Family('Arial');
-    row.Font.Size(12);
-    row.Font.WrapText(true);
-    row.Font.Alignment.Vertical('center');
-    row.Font.Alignment.Horizontal('center');
-    row.Border({
+    row.font.name = 'Arial';
+    row.font.size = 12;
+    row.alignment.wrapText = true;
+    row.alignment.vertical = 'center';
+    row.alignment.horizontal = 'center';
+    row.border = {
       top:{
         style: 'thick',
       },
@@ -297,26 +301,30 @@ function rowStyle(wb, odd, middle, header) {
         style: 'thick',
       },
       right:{
-        style: 'thick',
-      },
-    });
+        style: 'thick'
+      }
+    };
   } else {
-    row.Font.Family('Arial');
-    row.Font.Size(12);
-    row.Font.WrapText(true);
-    row.Fill.Pattern('solid');
-    row.Fill.Color(color);
-    row.Font.Alignment.Vertical('center');
+    row.font.name = 'Arial';
+    row.font.size = 12;
+    row.alignment.wrapText = true;
+    row.fill = {
+      type: 'pattern',
+      patternType: 'solid',
+      fgColor: color
+    };
+    row.alignment.vertical = 'center';
     if (middle) {
-      row.Font.Alignment.Horizontal('center');
+      row.alignment.horizontal = 'center';
     }
-    row.Border({
+    row.border = {
       bottom:{
         style: 'thin',
-        color: 'A0A0A4',
-      },
-    });
+        color: 'A0A0A4'
+      }
+    };
   }
+  row = wb.createStyle(row);
   return row;
 }
 
@@ -1406,35 +1414,35 @@ function createExportFile(job) {
   }, (err, app) => {
     if (app.enabled === true) {
       const wb = new xl.Workbook();
-      const ws = wb.WorkSheet('Купоны');
+      const ws = wb.addWorksheet('Купоны');
       const headerStyle = new rowStyle(wb, true, false, true);
       const rowOddStyle = new rowStyle(wb, true, false, false);
       const rowOddStyleMiddle = new rowStyle(wb, true, true, false);
       const rowEvenStyle = new rowStyle(wb, false, false, false);
       const rowEvenStyleMiddle = new rowStyle(wb, false, true, false);
-      ws.Row(1).Height(30);
-      ws.Column(1).Width(30);
-      ws.Column(2).Width(30);
-      ws.Column(3).Width(30);
-      ws.Column(4).Width(30);
-      ws.Column(5).Width(30);
-      ws.Column(6).Width(30);
-      ws.Column(7).Width(30);
-      ws.Column(8).Width(30);
-      ws.Column(9).Width(30);
-      ws.Column(10).Width(30);
-      ws.Column(11).Width(30);
-      ws.Cell(1, 1).String('Код купона').Style(headerStyle);
-      ws.Cell(1, 2).String('Тип купона').Style(headerStyle);
-      ws.Cell(1, 3).String('Тип скидки').Style(headerStyle);
-      ws.Cell(1, 4).String('Величина скидки').Style(headerStyle);
-      ws.Cell(1, 5).String('Описание').Style(headerStyle);
-      ws.Cell(1, 6).String('Группа категорий').Style(headerStyle);
-      ws.Cell(1, 7).String('Минимальная сумма заказа').Style(headerStyle);
-      ws.Cell(1, 8).String('Один раз для каждого клиента').Style(headerStyle);
-      ws.Cell(1, 9).String('Действителен по').Style(headerStyle);
-      ws.Cell(1, 10).String('Заблокирован').Style(headerStyle);
-      ws.Cell(1, 11).String('Использован').Style(headerStyle);
+      ws.row(1).setHeight(30);
+      ws.column(1).setWidth(30);
+      ws.column(2).setWidth(30);
+      ws.column(3).setWidth(30);
+      ws.column(4).setWidth(30);
+      ws.column(5).setWidth(30);
+      ws.column(6).setWidth(30);
+      ws.column(7).setWidth(30);
+      ws.column(8).setWidth(30);
+      ws.column(9).setWidth(30);
+      ws.column(10).setWidth(30);
+      ws.column(11).setWidth(30);
+      ws.cell(1, 1).string('Код купона').style(headerStyle);
+      ws.cell(1, 2).string('Тип купона').style(headerStyle);
+      ws.cell(1, 3).string('Тип скидки').style(headerStyle);
+      ws.cell(1, 4).string('Величина скидки').style(headerStyle);
+      ws.cell(1, 5).string('Описание').style(headerStyle);
+      ws.cell(1, 6).string('Группа категорий').style(headerStyle);
+      ws.cell(1, 7).string('Минимальная сумма заказа').style(headerStyle);
+      ws.cell(1, 8).string('Один раз для каждого клиента').style(headerStyle);
+      ws.cell(1, 9).string('Действителен по').style(headerStyle);
+      ws.cell(1, 10).string('Заблокирован').style(headerStyle);
+      ws.cell(1, 11).string('Использован').style(headerStyle);
       Coupons.find({
         insalesid: job.data.id,
       }, (err, coupons) => {
@@ -1455,40 +1463,40 @@ function createExportFile(job) {
               worked = 'нет';
             }
             const disabled = ((+coup.disabled === 1) ? 'да' : 'нет');
-            ws.Row(i).Height(20);
-            ws.Cell(i, 1)
-              .String(coup.code)
-              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-            ws.Cell(i, 2)
-              .String(act)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 3)
-              .String(typeDiscount)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 4)
-              .Number(+coup.discount)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 5)
-              .String(coup.description)
-              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-            ws.Cell(i, 6)
-              .String(coup.discountcollections)
-              .Style((isEven(i)) ? rowEvenStyle : rowOddStyle);
-            ws.Cell(i, 7)
-              .Number(+minprice)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 8)
-              .String(actclient)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 9)
-              .String(expired)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 10)
-              .String(disabled)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
-            ws.Cell(i, 11)
-              .String(worked)
-              .Style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.row(i).setHeight(20);
+            ws.cell(i, 1)
+              .string(coup.code)
+              .style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.cell(i, 2)
+              .string(act)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 3)
+              .string(typeDiscount)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 4)
+              .number(+coup.discount)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 5)
+              .string(coup.description)
+              .style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.cell(i, 6)
+              .string(coup.discountcollections)
+              .style((isEven(i)) ? rowEvenStyle : rowOddStyle);
+            ws.cell(i, 7)
+              .number(+minprice)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 8)
+              .string(actclient)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 9)
+              .string(expired)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 10)
+              .string(disabled)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
+            ws.cell(i, 11)
+              .string(worked)
+              .style((isEven(i)) ? rowEvenStyleMiddle : rowOddStyleMiddle);
             i++;
             callback();
           }, e => {
@@ -1499,10 +1507,11 @@ function createExportFile(job) {
               const path = `${__dirname}/public/files/${job.data.id}`;
               fs.exists(path, exists => {
                 if (exists) {
-                  wb.write(`${path}/coupons.xlsx`, err => {
+                  wb.write(`${path}/coupons.xlsx`, (err, stats) => {
                     if (err) {
                       log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                     } else {
+                      log.info(`Магазин id=${job.data.id} Файл успешно создан`);
                       createJobCloseTask(job.data.taskid);
                     }
                   });
@@ -1511,7 +1520,7 @@ function createExportFile(job) {
                     if (err) {
                       log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                     } else {
-                      wb.write(`${path}/coupons.xlsx`, err => {
+                      wb.write(`${path}/coupons.xlsx`, (err, stats) => {
                         if (err) {
                           log.error(`Магазин id=${job.data.id} Ошибка: ${err}`);
                         } else {
