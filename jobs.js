@@ -135,7 +135,6 @@ setInterval(() => {
                 j = new Job(_task.insalesid, _task._id, _task.type);
                 createJobDeleteCouponsFromApp(j);
                 _task.status = 2;
-                _task.count = 1;
                 _task.updated_at = new Date();
                 _task.save(err => {
                   if (err) {
@@ -155,7 +154,6 @@ setInterval(() => {
                 j.data.variant = _task.variant;
                 createJobDeleteCouponsFromApp(j);
                 _task.status = 2;
-                _task.count = 1;
                 _task.updated_at = new Date();
                 _task.save(err => {
                   if (err) {
@@ -175,7 +173,6 @@ setInterval(() => {
                 j.data.path = _task.path;
                 createJobDeleteCouponsFromApp(j);
                 _task.status = 2;
-                _task.count = 1;
                 _task.updated_at = new Date();
                 _task.save(err => {
                   if (err) {
@@ -205,7 +202,6 @@ setInterval(() => {
                 j.data.group = _task.group;
                 createJobDeleteCouponsFromApp(j);
                 _task.status = 2;
-                _task.count = 1;
                 _task.updated_at = new Date();
                 _task.save(err => {
                   if (err) {
