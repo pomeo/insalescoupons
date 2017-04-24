@@ -239,7 +239,11 @@ setInterval(() => {
                 const hours = Math.abs(new Date() - new Date(_task.updated_at)) / 36e5;
                 if (hours > 0.5) {
                   _task.status = 1;
-                  _task.count += 1;
+                  if (_task.count) {
+                    _task.count += 1;
+                  } else {
+                    _task.count = 1;
+                  }
                   _task.updated_at = new Date();
                   _task.save(err => {
                     if (err) {
